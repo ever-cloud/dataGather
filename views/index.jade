@@ -1,0 +1,13 @@
+extends layout
+
+
+block content
+ p 测试模拟
+ p Url地址:
+  input( id='url' name='url' value='/login' size='80')
+ p Json信息:
+  textarea(id='result' rows='10' cols='100') {"seckey":"","data":[{"userId":"zs","password":"zs"}]}
+ input( type='button' onclick="send()" value='send')
+ p 消息体报文例子
+ #message 消息内容<br/>
+

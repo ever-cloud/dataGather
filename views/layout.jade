@@ -1,0 +1,30 @@
+doctype transitional
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src='/javascripts/jquery-1.11.3.min.js')
+    script(type='text/javascript').
+      $(document).ready( function() {
+
+      })
+      function send() {
+          var action = document.getElementById('url').value;
+          var result = document.getElementById('result').value;
+          $.ajax({
+              url: action,
+              type: "POST",
+              contentType: "application/json;charset=utf-8",
+              data: result,
+              success: function (msg) {
+                  setMessageInnerHTML(msg);
+              }
+
+          })
+      }
+      function setMessageInnerHTML(innerHTML) {
+          document.getElementById('message').innerHTML += innerHTML + '<br/>';
+      }
+
+  body
+    block content
