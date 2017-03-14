@@ -4,6 +4,7 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var seckeyPool = require("./utils/seckeyPool");
 
 var app = express();
 
@@ -25,17 +26,16 @@ app.use(function (req, res, next) {
      验证seckey有效性，合法的seckey 存在redis中，此验证只需要从redis中查询是否存在即可。
      */
     function  verify(seckey) {
-        if(seckey ==undefined || seckey==""){
+        if(seckey === undefined || seckey === null || seckey === ""){
             return false;
         }else{
             //查询redis是否存在
-            // todo
-            return true;
+            return seckeyPool.exists();
         }
     }
     //仅拦截restful请求
     var contentType = req.get('Content-Type');
-    if(contentType=='application/json;charset=UTF-8'){
+    if(contentType === 'application/json;charset=UTF-8'){
         var path = req.url;
         if (path!='/login') {
             var obj = req.body;

@@ -17,7 +17,7 @@ router.use('/', function(req, res, next) {
     var password = json.data[0].password;
     postgre.excuteSql("SELECT password FROM p_user where name = $1 ",[userId],function(result) {
         if(result.rowCount>0){
-            if(password===result.rows[0].password){
+            if(password === result.rows[0].password){
                 seckeyPool.add(userId,function (result) {
                     res.send('{"code":1001,"seckey":"'+result+'","msg":"登录成功！"}');
                 });
