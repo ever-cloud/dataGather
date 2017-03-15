@@ -7,6 +7,9 @@ router.use('/deviceInfo', function(req, res, next) {
     var json = req.body;
     var seckey = json.seckey;
     console.log(seckeyPool.exists(seckey));
+    console.log(seckeyPool.get(seckey,function (result) {
+        console.log(result);
+    }));
   //todo
   res.send('respond with a resource videoMonitor deviceInfo');
 });

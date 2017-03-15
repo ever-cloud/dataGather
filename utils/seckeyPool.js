@@ -7,14 +7,20 @@
 var redis = require("./redis");
 var seckeyPool ={};
 var crypto = require('crypto');
-seckeyPool.add = function (userId ,callback) {
+seckeyPool.add = function (userId,obj ,callback) {
     var key = createSeckey(userId);
-    redis.set(key, userId,24*60*60);
-    return callback(key);
+    redis.set(key, obj,24*60*60);
+    callback(key);
 };
+seckeyPool.get = function (userId,callback) {
+    var key = createSeckey(userId);
+    var value =redis.get(key);
+    callback(value);
+};
+
 seckeyPool.exists = function (seckey) {
-    var key = redis.get(seckey);
-    if(key==undefined || key==null||key==''){
+    var value = redis.get(seckey);
+    if(value==undefined || value==null||value==''){
        return false;
     };
     return true;
