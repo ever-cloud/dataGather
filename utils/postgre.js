@@ -2,22 +2,29 @@
  * Created by lenovo on 2017/3/12.
  */
 "use strict";
-var postgredb = {};
+
 var pg = require('pg');
 // 数据库配置
-var config = {
-    user:"postgres",
-    database:"datagather",
-    password:"postgres",
-    host:"192.168.3.239",
-    port:5432,
 
+var pconf = require('../properties/config');
+var user = pconf.get('postgre.user');
+var database = pconf.get('postgre.database');
+var password = pconf.get('postgre.password');
+var host = pconf.get('postgre.host');
+var port = pconf.get('postgre.port');
+var config = {
+    user:user,
+    database:database,
+    password:password,
+    host:host,
+    port:port,
     // 扩展属性
     max:20, // 连接池最大连接数
     idleTimeoutMillis:3000, // 连接最大空闲时间 3s
 }
 var pool = new pg.Pool(config);
 
+var postgredb = {};
 /**
  * 查询数据
  * @param sql

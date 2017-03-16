@@ -5,6 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var seckeyPool = require("./utils/seckeyPool");
+var subscribe = require("./mq/subscribe");
 
 var app = express();
 
@@ -54,7 +55,7 @@ app.use('/login', login);
 
 var systemInfo = require('./routes/business/systemInfo');
 app.use('/systemInfo', systemInfo);
-var pSystemInfoSubscribe = require("./mq/subscribe");
+
 
 
 //yangHuuserJun  routes
