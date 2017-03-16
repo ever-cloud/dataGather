@@ -52,6 +52,11 @@ app.use('/', index);
 var login = require('./routes/base/login');
 app.use('/login', login);
 
+var systemInfo = require('./routes/business/systemInfo');
+app.use('/systemInfo', systemInfo);
+var pSystemInfoSubscribe = require("./mq/subscribe");
+
+
 //yangHuuserJun  routes
 var videoMonitor = require('./routes/business/videoMonitor');
 app.use('/videoMonitor', videoMonitor);

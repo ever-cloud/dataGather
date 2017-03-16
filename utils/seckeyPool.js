@@ -12,17 +12,21 @@ seckeyPool.add = function (userId,obj ,callback) {
     redis.set(key, obj,24*60*60);
     callback(key);
 };
-seckeyPool.get = function (userId,callback) {
-    var key = createSeckey(userId);
-    var value =redis.get(key);
-    callback(value);
+seckeyPool.get = function (seckey,callback) {
+    redis.get(seckey,function (err,result) {
+        if (err){
+            console.log(err);
+        }
+        callback(result);
+    });
 };
 
 seckeyPool.exists = function (seckey) {
-    var value = redis.get(seckey);
-    if(value==undefined || value==null||value==''){
-       return false;
-    };
+    redis.get(seckey,function (result) {
+        if(result==undefined || result==null|| result==''){
+            return false;
+        };
+    });
     return true;
 };
 

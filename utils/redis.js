@@ -43,15 +43,17 @@ redisdb.set = function(key, value, expire){
  * @param key 键
  * @param callBack(err,result)
  */
-redisdb.get = function(key){
+redisdb.get = function(key,callback){
 
-    return  client.get(key, function(err,result){
+      client.get(key, function(err,result){
 
         if (err) {
             console.log(err);
+            callback(err,null)
             return;
         }
-        return result;
+
+        callback(null,result);
     });
 }
 /**
@@ -83,15 +85,16 @@ redisdb.hset = function(key,field, value, expire){
  * @param key 键
  * @param callBack(err,result)
  */
-redisdb.hget = function(key,field){
+redisdb.hget = function(key,field,callback){
 
-    return client.hget(key,field, function(err,result){
+    client.hget(key,field, function(err,result){
 
         if (err) {
             console.log(err);
+            callback(err,null)
             return;
         }
-        return result;
+        callback(null,result);
     });
 }
 /**
@@ -99,15 +102,15 @@ redisdb.hget = function(key,field){
  * @param key 键
  * @param callBack(err,result)
  */
-redisdb.hget = function(key){
+redisdb.hget = function(key,callback){
 
-    return client.get(key, function(err,result){
-
+     client.get(key, function(err,result){
         if (err) {
             console.log(err);
+            callback(err,null)
             return;
         }
-        return result;
+         callback(null,result);
     });
 }
 

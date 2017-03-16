@@ -15,7 +15,7 @@ router.use('/', function(req, res, next) {
     var json = req.body;
     var userId = json.data[0].userId;
     var password = json.data[0].password;
-    postgre.excuteSql("SELECT password,deptId FROM p_user where userid = $1 ",[userId],function(result) {
+    postgre.excuteSql('SELECT userid as "userId",password,deptId as "communityId"  FROM p_user where userid = $1 ',[userId],function(result) {
         if(result.rowCount>0){
             if(password === result.rows[0].password){
                 seckeyPool.add(userId,JSON.stringify(result.rows[0]),function (result) {
