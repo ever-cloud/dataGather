@@ -4,11 +4,12 @@ var router = express.Router();
 var postgre = require("../../utils/postgre");
 var seckeyPool = require("../../utils/seckeyPool");
 
-/* 登录的json对象结构
+/* 登录插入redis的json对象结构（从p_user表中取出)
  {"seckey":"",
  "data":[{
- "userId ":"zs"  //用户名;
- "password”:"zs"         //密码
+ "userId ":"zs"       //用户名;
+ "password":"zs"      //密码
+ "communityId":"xxx"  //社区id
  }]}
  */
 router.use('/', function(req, res, next) {
@@ -23,10 +24,10 @@ router.use('/', function(req, res, next) {
                 });
 
             }else{
-                res.send('{"code":4002,"msg":"密码不正确！"}');
+                res.send('{"code":'+constUtils.WORK_LOGIN_PASSERR+',"msg":"密码不正确！"}');
             }
         }else{
-            res.send('{"code":4001,"msg":"用户名不存在！"}');
+            res.send('{"code":'+constUtils.WORK_LOGIN_NOUSER+',"msg":"用户名不存在！"}');
         }
     });
 });

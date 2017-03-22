@@ -34,16 +34,61 @@ var postgredb = {};
 postgredb.excuteSql = function(sql,params, callback){
     pool.connect(function(err, client, done) {
         if(err) {
-            return console.error('数据库连接出错', err);
+            return console.error('数据库连接出错!请检查链接情况！', err);
         }
+        var optType = sql.toString().includes("insert")?'Insert':sql.toString().includes("update")?'Update':sql.toString().includes("delete")?'Delete':sql.toString().includes("select")?'Select':'';
+        console.log(optType+ ' Begin Execute!');
+        console.log('Execute Sql:'+sql+';Params:'+params);
         client.query(sql,params, function(err, result) {
             done();// 释放连接（将其返回给连接池）
             if(err) {
-                return console.error('数据库操作出错', err);
+                return console.error('数据库操作出错,操作类型：'+optType, err);
             }
+            console.log(optType+' Success;Current Time:'+new Date().toLocaleString());
+            console.log(optType+' Recorde Num: ' + result.rowCount + ' Row!');
             callback(result);
+            console.log(optType+' Is End!');
         });
     });
 };
 
+/**
+ * 根据表名和内容得到拼接的insert语句及对应插入字段的数组
+ * @param tablename 表名
+ * @param jsondate json格式中date内的数据内容,如{id:"001",systemid:"1"}
+ * @param extendjson json格式中需要拼接到date内的外部数据内容，如{community:"001",opter:"zhangsan",optDate:"2017-4-1"}
+ * @param callBack(result) 返回值的回调函数
+ */
+postgredb.getInsertDBSql=function(tablename,jsondate,extendjson){
+    var result_json = {};
+    var keystr_name = '';
+    var keystr_value = '';
+    var values = [];
+    var valueIndex = 0;
+    if((typeof jsondate)=='object' && Object.keys(jsondate).length>0){
+
+        Object.keys(jsondate).forEach(function(key,index){
+            valueIndex += 1;
+            keystr_name += key.toLowerCase()+',';
+            keystr_value += '$'+ valueIndex + ',';
+            values.push(jsondate[key]);
+        });
+        if((typeof extendjson)=='object' && Object.keys(extendjson).length>0) {
+
+            Object.keys(extendjson).forEach(function (key, index) {
+                valueIndex += 1;
+                keystr_name += key.toLowerCase() + ',';
+                keystr_value += '$' + valueIndex + ',';
+                values.push(extendjson[key]);
+            });
+        }
+        keystr_name=keystr_name.substr(0,keystr_name.length-1);
+        keystr_value=keystr_value.substr(0,keystr_value.length-1);
+        result_json['sql']='insert into '+tablename+'('+keystr_name+') values('+keystr_value+')';
+        result_json['values']=values;
+    }
+    //callback(resultJson);
+    //console.log('insert sqlJson is:'+result_json);
+    return result_json;
+};
 module.exports = postgredb;
