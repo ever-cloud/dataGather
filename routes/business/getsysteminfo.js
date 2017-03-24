@@ -1,27 +1,30 @@
-var express = require('express');
-var router = express.Router();
-var seckeyPool = require("../../utils/seckeyPool");
-var pSystemInfo = require("../../mq/publish");
-var constUtils = require('../../utils/constUtils');
-var moment = require('moment');
-var destination = constUtils.QUEUE_P_SYSTEMINFO;
+let express = require('express');
+let router = express.Router();
+let seckeyPool = require("../../utils/seckeyPool");
+let pSystemInfo = require("../../mq/publish");
+let constUtils = require('../../utils/constUtils');
+let moment = require('moment');
+let redis = require('../../utils/redis');
 
-/* GET users listing.
- * json:数据发送到ActiveMQ中，包括req.body数据主体；userInfo登录用户信息包括userId，password，communityid
+
+/* 获取物联平台十大系统信息
+ * json:数据发送到ActiveMQ中，包括req.body数据主体；userInfo登录用户信息包括userId，password，communityId
  *
  *
  */
 router.use('/getsysteminfo', function(req, res, next) {
-    var json = req.body;
-    var seckey = json.seckey;
-     seckeyPool.get(seckey,function(loginuser) {
-			loginuser=JSON.parse(loginuser);
-        loginuser['tableName'] = constUtils.TABLE_P_SYSTEMINFO;
-        json['userInfo'] =loginuser;
-        json['optDate'] = moment().format('YYYY-MM-DD');
-        //pSystemInfo.publish(destination,JSON.stringify(json));
+    let json = req.body;
+    let seckey = json.seckey;
+    let communityId = '';
+    let key = constUtils.TABLE_P_SYSTEMINFO;
+    seckeyPool.get(seckey,function(loginuser) {
+        loginuser=JSON.parse(loginuser);
+        communityId = loginuser.communityId;
+        console.log('当前用户的社区是'+communityId+',即将获取此社区十大物联系统信息！');
+        redis.hget(key,communityId,function(err,systeminfo){
+            res.send(systeminfo);
+        });
     });
-    res.send('{"code":'+constUtils.WORK_UPLOAD_SUCCESS+',"msg":"[社区物联系统信息]数据上传ActiveMq成功！"} 上传时间:'+moment().format('YYYY-MM-DD hh:mm:ss'));
 
 });
 
