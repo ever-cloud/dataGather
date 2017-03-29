@@ -2,6 +2,8 @@ let express = require('express');
 let path = require('path');
 let favicon = require('serve-favicon');
 let logger = require('morgan');
+let moment = require('moment');
+let fs = require('fs');
 let cookieParser = require('cookie-parser');
 let bodyParser = require('body-parser');
 let seckeyPool = require("./utils/seckeyPool");
@@ -9,6 +11,7 @@ let subscribe = require("./mq/subscribe");
 let postgre = require("./utils/postgre");
 let redis = require("./utils/redis");
 let constUtils = require('./utils/constUtils');
+let log4js = require('./utils/logger');
 
 let app = express();
 
@@ -18,14 +21,32 @@ app.set('view engine', 'jade');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+//logger save in disk path,use log4js component,output includes 9 Level,That is
+// {
+//     ALL: new Level(Number.MIN_VALUE, "ALL"),
+//     TRACE: new Level(5000, "TRACE"),
+//     DEBUG: new Level(10000, "DEBUG"),
+//     INFO: new Level(20000, "INFO"),
+//     WARN: new Level(30000, "WARN"),
+//     ERROR: new Level(40000, "ERROR"),
+//     FATAL: new Level(50000, "FATAL"),
+//     MARK: new Level(9007199254740992, "MARK"), // 2^53
+//     OFF: new Level(Number.MAX_VALUE, "OFF")
+// }
+let jsName = __filename.substr(__dirname.length+1);
+let logName = jsName.replace('\.js','\.log');
+let log=log4js.config(jsName,logName);
+
+
 //初始化物联十系统信息入redis开始
-let sql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by $1,$2';
-postgre.excuteSql(sql,['deptid','systemid'],function (result){
+let sql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by deptid,systemid';
+postgre.excuteSql(sql,[],function (result){
     if(result.rowCount>0){
         let systeminfoJson = [];
         let communityId = '';

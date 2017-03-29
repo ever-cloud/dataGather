@@ -37,9 +37,32 @@
 //     //      });
 //     // console.log(JSON.stringify(result.toString()));
 // });
-let myarr =[];
-myarr.push({name:'zhangsan',sex:'w'});
-myarr.push({name:'zhangsan1',sex:'m'});
-myarr.push({name:'zhangsan2',sex:'w'});
-myarr.push({name:'zhangsan3',sex:'m'});
-console.log(JSON.stringify(myarr));
+// let myarr =[];
+// myarr.push({name:'zhangsan',sex:'w'});
+// myarr.push({name:'zhangsan1',sex:'m'});
+// myarr.push({name:'zhangsan2',sex:'w'});
+// myarr.push({name:'zhangsan3',sex:'m'});
+// console.log(JSON.stringify(myarr));
+//let log = reuqire('morgan');
+// let path = require('path');
+// let moment = require('moment');
+// let eday = moment().format('YYYY-MM-DD');
+// let myPath = path.join(__dirname,'myfolder/'+eday);
+// console.log('curpath'+myPath);
+// console.log('curexecPath'+process.execPath)
+// console.log('curDirname'+__dirname)
+// console.log('curexecCmd'+this.name)
+
+let path = require('path');
+let jsName =__filename.substr(__dirname.length+1);
+console.log('当前文件'+ jsName.replace('\.js','\.log'));
+
+console.log((__dirname).length);
+console.log(path.resolve('../..','cur','good'));
+// console.log(path.join('../..',__dirname,'cur','good'));
+function aa(){
+    this.name='zhangsan';
+    //console.log(typeof this);
+    console.log(this);
+}
+

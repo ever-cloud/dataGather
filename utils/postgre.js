@@ -3,16 +3,16 @@
  */
 "use strict";
 
-var pg = require('pg');
+let pg = require('pg');
 // 数据库配置
 
-var pconf = require('../properties/config');
-var user = pconf.get('postgre.user');
-var database = pconf.get('postgre.database');
-var password = pconf.get('postgre.password');
-var host = pconf.get('postgre.host');
-var port = pconf.get('postgre.port');
-var config = {
+let pconf = require('../properties/config');
+let user = pconf.get('postgre.user');
+let database = pconf.get('postgre.database');
+let password = pconf.get('postgre.password');
+let host = pconf.get('postgre.host');
+let port = pconf.get('postgre.port');
+let config = {
     user:user,
     database:database,
     password:password,
@@ -21,14 +21,15 @@ var config = {
     // 扩展属性
     max:20, // 连接池最大连接数
     idleTimeoutMillis:3000, // 连接最大空闲时间 3s
-}
-var pool = new pg.Pool(config);
+};
+let pool = new pg.Pool(config);
 
-var postgredb = {};
+let postgredb = {};
 /**
  * 查询数据
  * @param sql
  * @param params
+ * @param callback
  * @return callBack(err,result)
  */
 postgredb.excuteSql = function(sql,params, callback){
@@ -36,7 +37,7 @@ postgredb.excuteSql = function(sql,params, callback){
         if(err) {
             return console.error('数据库连接出错!请检查链接情况！', err);
         }
-        var optType = sql.toString().toLowerCase().includes("insert")?'Insert':sql.toString().includes("update")?'Update':sql.toString().includes("delete")?'Delete':sql.toString().includes("select")?'Select':'';
+        let optType = sql.toString().toLowerCase().includes("insert")?'Insert':sql.toString().includes("update")?'Update':sql.toString().includes("delete")?'Delete':sql.toString().includes("select")?'Select':'';
         console.log(optType+ ' Sql Begin Execute!');
         console.log('Execute Sql:'+sql+';Params:'+params);
         client.query(sql,params, function(err, result) {
@@ -60,11 +61,11 @@ postgredb.excuteSql = function(sql,params, callback){
  * @return result_json 返回包含拼接的Sql语句 及对应参数值数组
  */
 postgredb.getInsertDBSql=function(tablename,jsondate,jsonextend){
-    var result_json = {};
-    var keystr_name = '';
-    var keystr_value = '';
-    var values = [];
-    var valueIndex = 0;
+    let result_json = {};
+    let keystr_name = '';
+    let keystr_value = '';
+    let values = [];
+    let valueIndex = 0;
     if((typeof jsondate)=='object' && Object.keys(jsondate).length>0){
 
         Object.keys(jsondate).forEach(function(key,index){
