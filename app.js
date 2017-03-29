@@ -39,6 +39,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 //     MARK: new Level(9007199254740992, "MARK"), // 2^53
 //     OFF: new Level(Number.MAX_VALUE, "OFF")
 // }
+fs.existsSync(path.resolve(__dirname,'logs')) || fs.mkdirSync(path.resolve(__dirname,'logs'));
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
 let log=log4js.config(jsName,logName);
