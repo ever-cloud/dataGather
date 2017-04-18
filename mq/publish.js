@@ -6,6 +6,7 @@ var config = require('../properties/config');
 var client = new Stomp(config.get('activeMq.host'), config.get('activeMq.port'),config.get('activeMq.userId'), config.get('activeMq.pwd'));
 var p = {};
 
+
 /**
  * [{destination:"xxx",content:"xxxx"},{destination:"xxx",content:"xxxx"},...]
  * @param destination
