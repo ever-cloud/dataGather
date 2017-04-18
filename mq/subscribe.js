@@ -21,8 +21,8 @@ client_systembasicinfo.connect(function() {
             let deptId = json.userInfo.communityId;
 			let tableName=json.userInfo.tableName;
 			extendJson['communityid'] = deptId;
-            extendJson['opter'] = json.userInfo.userId;
-            extendJson['optDate'] = json.optDate;
+            extendJson['aid'] = json.userInfo.userId;
+            extendJson['atime'] = json.optDate;
             let data = json.data;
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
@@ -718,10 +718,10 @@ client_parking_carrecord.connect(function() {
     });
 });
 //可视对讲设备基本信息订阅
-let client_videoinntercom_deviceinfo = new Stomp(host,port,user,pwd);
-client_videoinntercom_deviceinfo.connect(function() {
-    let destination = constUtils.QUEUE_P_VIDEOINNTERCOM_DEVICEINFO;
-    client_videoinntercom_deviceinfo.subscribe(destination, function(body, headers) {
+let client_videointercom_deviceinfo = new Stomp(host,port,user,pwd);
+client_videointercom_deviceinfo.connect(function() {
+    let destination = constUtils.QUEUE_P_VIDEOINTERCOM_DEVICEINFO;
+    client_videointercom_deviceinfo.subscribe(destination, function(body, headers) {
         if (body){
 			let extendJson={};     
             let json = JSON.parse(body);
@@ -747,10 +747,10 @@ client_videoinntercom_deviceinfo.connect(function() {
     });
 });
 //可视对讲设备呼叫信息订阅
-let client_videoinntercom_call = new Stomp(host,port,user,pwd);
-client_videoinntercom_call.connect(function() {
-    let destination = constUtils.QUEUE_P_VIDEOINNTERCOM_CALL;
-    client_videoinntercom_call.subscribe(destination, function(body, headers) {
+let client_videointercom_call = new Stomp(host,port,user,pwd);
+client_videointercom_call.connect(function() {
+    let destination = constUtils.QUEUE_P_VIDEOINTERCOM_CALL;
+    client_videointercom_call.subscribe(destination, function(body, headers) {
         if (body){
 			let extendJson={};     
             let json = JSON.parse(body);
@@ -776,10 +776,10 @@ client_videoinntercom_call.connect(function() {
     });
 });
 //可视对讲单元门开门信息订阅
-let client_videoinntercom_opengate = new Stomp(host,port,user,pwd);
-client_videoinntercom_opengate.connect(function() {
-    let destination = constUtils.QUEUE_P_VIDEOINNTERCOM_OPENGATE;
-    client_videoinntercom_opengate.subscribe(destination, function(body, headers) {
+let client_videointercom_opengate = new Stomp(host,port,user,pwd);
+client_videointercom_opengate.connect(function() {
+    let destination = constUtils.QUEUE_P_VIDEOINTERCOM_OPENGATE;
+    client_videointercom_opengate.subscribe(destination, function(body, headers) {
         if (body){
 			let extendJson={};     
             let json = JSON.parse(body);

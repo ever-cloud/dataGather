@@ -3,7 +3,7 @@
  * Edit by yanghuijun 2017/3/17
  * 自定义系统使用各类常量
  */
-var constData={}
+let constData={};
 
 //业务错误码及错误提示
 /**
@@ -53,8 +53,11 @@ constData.WORK_LOGIN_PASSERR = "4005" ;
 constData.WORK_SYSTEM_ERROR = "7000" ;
 
 
-//接口数据在ActiveMq中的队列名，命名为/queue/tablename
-var queue="/queue/";
+//接口数据在ActiveMq中的队列名，命名为/queue/tablename（采用点对点）
+let queue="/queue/";
+//接口数据在ActiveMq中的主题，命名为/topic/interfacename(采用publish/subscribe)
+let topic="/topic/";
+
 /**
  * @name {视频监控设备的基本信息}
  */
@@ -63,18 +66,18 @@ constData.QUEUE_P_VIDEOMONITOR_DEVICEINFO = queue+constData.TABLE_P_VIDEOMONITOR
 /**
  * @name {可视开门系统设备的基本信息}
  */
-constData.TABLE_P_VIDEOINNTERCOM_DEVICEINFO = "p_videoinntercom_deviceinfo";
-constData.QUEUE_P_VIDEOINNTERCOM_DEVICEINFO = queue+constData.TABLE_P_VIDEOINNTERCOM_DEVICEINFO;
+constData.TABLE_P_VIDEOINTERCOM_DEVICEINFO = "p_videointercom_deviceinfo";
+constData.QUEUE_P_VIDEOINTERCOM_DEVICEINFO = queue+constData.TABLE_P_VIDEOINTERCOM_DEVICEINFO;
 /**
  * @name {可视开门系统开门记录信息}
  */
-constData.TABLE_P_VIDEOINNTERCOM_OPENGATE = "p_videoinntercom_opengate";
-constData.QUEUE_P_VIDEOINNTERCOM_OPENGATE = queue+constData.TABLE_P_VIDEOINNTERCOM_OPENGATE;
+constData.TABLE_P_VIDEOINTERCOM_OPENGATE = "p_videointercom_opengate";
+constData.QUEUE_P_VIDEOINTERCOM_OPENGATE = queue+constData.TABLE_P_VIDEOINTERCOM_OPENGATE;
 /**
  * @name {可视开门系统对讲记录信息}
  */
-constData.TABLE_P_VIDEOINNTERCOM_CALL = "p_videoinntercom_call";
-constData.QUEUE_P_VIDEOINNTERCOM_CALL = queue+constData.TABLE_P_VIDEOINNTERCOM_CALL;
+constData.TABLE_P_VIDEOINTERCOM_CALL = "p_videointercom_call";
+constData.QUEUE_P_VIDEOINTERCOM_CALL = queue+constData.TABLE_P_VIDEOINTERCOM_CALL;
 /**
  * @name {社区物联系统状态信息}
  */
@@ -82,8 +85,9 @@ constData.TABLE_P_SYSTEMSTATUSINFO = "p_systemstatusinfo";
 constData.QUEUE_P_SYSTEMSTATUSINFO = queue+constData.TABLE_P_SYSTEMSTATUSINFO;
 /**
  * @name {社区物联系统信息}
+ * 换第三方表
  */
-constData.TABLE_P_SYSTEMINFO = "p_systeminfo";
+constData.TABLE_P_SYSTEMINFO = "t_community_system";
 constData.QUEUE_P_SYSTEMINFO = queue+constData.TABLE_P_SYSTEMINFO;
 /**
  * @name {人员定位定位卡信息}
@@ -186,6 +190,11 @@ constData.QUEUE_P_BROADCAST_RECORD = queue+constData.TABLE_P_BROADCAST_RECORD;
 constData.TABLE_P_BROADCAST_DEVICEINFO = "p_broadcast_deviceinfo";
 constData.QUEUE_P_BROADCAST_DEVICEINFO = queue+constData.TABLE_P_BROADCAST_DEVICEINFO;
 /**
+ * @name {广播通讯系统分区信息}
+ */
+constData.TABLE_P_BROADCAST_AREA = "p_broadcast_area";
+constData.QUEUE_P_BROADCAST_AREA = queue+constData.TABLE_P_BROADCAST_AREA;
+/**
  * @name {入侵报警系统防区信息}
  */
 constData.TABLE_P_ALARM_SECTORINFO = "p_alarm_sectorinfo";
@@ -200,6 +209,17 @@ constData.QUEUE_P_ALARM_INTRUSION = queue+constData.TABLE_P_ALARM_INTRUSION;
  */
 constData.TABLE_P_ALARM_DEVICEINFO = "p_alarm_deviceinfo";
 constData.QUEUE_P_ALARM_DEVICEINFO = queue+constData.TABLE_P_ALARM_DEVICEINFO;
+/**
+ * @name {物联系统统计主题}
+ */
+//社区
+constData.TOPIC_STATISTICS_COMMUNITY = topic+"portal.sysstatistics.community";
+//大区
+constData.TOPIC_STATISTICS_REGION = topic+"portal.sysstatistics.region";
+//集团
+constData.TOPIC_STATISTICS_GROUP = topic+"portal.sysstatistics.group";
+//海尔
+constData.TOPIC_STATISTICS_SUPER = topic+"portal.sysstatistics.super";
 
 
 module.exports = constData;

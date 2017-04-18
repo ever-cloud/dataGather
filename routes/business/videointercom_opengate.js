@@ -5,7 +5,7 @@ let publisher = require("../../mq/publish");
 let constUtils = require('../../utils/constUtils');
 let moment = require('moment');
 let log4js = require('../../utils/logger');
-let destination = constUtils.QUEUE_P_VIDEOINNTERCOM_OPENGATE;
+let destination = constUtils.QUEUE_P_VIDEOINTERCOM_OPENGATE;
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
 /* GET users listing.
@@ -19,7 +19,7 @@ router.use('/opengate', function(req, res, next) {
     let seckey = json.seckey;
      seckeyPool.get(seckey,function(loginuser) {
 			loginuser=JSON.parse(loginuser);
-        loginuser['tableName'] = constUtils.TABLE_P_VIDEOINNTERCOM_OPENGATE;
+        loginuser['tableName'] = constUtils.TABLE_P_VIDEOINTERCOM_OPENGATE;
         json['userInfo'] =loginuser;
         json['optDate'] = moment().format('YYYY-MM-DD');
         publisher.publish(destination,JSON.stringify(json));

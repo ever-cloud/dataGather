@@ -4,7 +4,9 @@
 "use strict";
 let redisdb = {};
 let redis = require("redis");
+var async = require('async');
 let client =  redis.createClient('6379', '192.168.3.239');
+// let client =  redis.createClient('6379', '192.168.1.105');
 
 client.on("error", function (err) {
     console.log("Error :" , err);
@@ -55,6 +57,22 @@ redisdb.get = function(key,callback){
         callback(null,result);
     });
 };
+/**
+ * 查询所有key
+ * @param key* 键,可通配*，？
+ * @param callback(err,result)
+ */
+redisdb.keys = function(regkey,callback){
+      client.keys(regkey, function(err,keys){
+        if (err) {
+            console.log(err);
+            callback(err,null);
+            return;
+        }
+        console.log('redis keys execute success!get keys is:' + regkey + '=>' + keys);
+        callback(keys);
+    });
+};
 
 /**
  * 删除键值
@@ -77,7 +95,7 @@ redisdb.del = function(key){
  * @param field 子键
  * @param value 值
  * @param expire (过期时间,单位秒;可为空，为空表示不过期)
- * @return callback(err,result)
+ * @return callback(result)
  */
 redisdb.hset = function(key,field,value,expire){
 
@@ -89,6 +107,7 @@ redisdb.hset = function(key,field,value,expire){
         }
         if (!isNaN(expire) && expire > 0) {
             client.expire(key, parseInt(expire));
+
         }
         let itemMsg = key+':'+field+':'+value;
         console.log(result==1?'redis hset execute insert success! item is:'+itemMsg:result==0?'redis hset execute update success! item is:'+itemMsg:'redis hset execute false! item is:'+itemMsg);
@@ -109,10 +128,10 @@ redisdb.hget = function(key,field,callback){
             return false;
         }
          console.log('redis hget execute success!hget item is:' + key+':'+field + '=>' + result);
-         callback(null,result);
+         callback(result);
+
     });
 };
-
 /**
  * 获取Hash类型某键的所有数据
  * @param key 键
@@ -121,12 +140,12 @@ redisdb.hget = function(key,field,callback){
 redisdb.hgetall = function(key,callback){
      client.hgetall(key,function(err,result){
         if (err) {
-            console.log(err);
+            console.log('hgetall operation is error,err result:'+err);
             callback(err,null);
             return false;
         }
          console.log('redis hgetall execute success!hgetall item is:' + key+ '=>' + result);
-         callback(null,result);
+         callback(result);
     });
 };
 
@@ -160,7 +179,7 @@ redisdb.hkeys = function(key,callback){
             return false;
         }
          console.log('redis hkeys execute success!item hkeys is:' + key+ '=>' + result);
-         callback(err,result);
+         callback(result);
     });
 };
 /**
@@ -176,7 +195,7 @@ redisdb.hvals = function(key,callback){
             return false;
         }
          console.log('redis hvals execute success!item hvals is:' + key+ '=>' + result);
-         callback(null,result);
+         callback(result);
     });
 };
 

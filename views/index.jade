@@ -31,7 +31,7 @@ block content
    font(color='brown') 物联系统基本信息变更:
    font(color='green')
     |id:记录唯一id,systemId:系统类型，比如videoMonitor代表视频监控,brand:品牌,model:型号,createTime:上线时间YYYY-MM-DD,maintenanceCycle:单位：天,principal:负责人,principalTel:负责人联系电话,verder:厂商联系人,venderTel:厂商联系人电话
- p URL : /common/systembasicinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","brand":"","model":"","createTime":"","maintenanceCycle":"","principal":"","principalTel":"","verder":"","venderTel":""}]}
+ p URL : /common/systembasicinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","brand":"","model":"","createTime":"","maintenanceCycle":"","principal":"","principalTel":"","vendor":"","vendortel":""}]}
 
  p
   strong
@@ -58,29 +58,29 @@ block content
   strong
    font(color='brown') 设备发生的故障记录:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceType:设备类型：比如camera/DVR,errorCode:故障码,errorType:故障类型1一般2严重（一般：可修，严重：需更换）,dateTime::故障时间
- p URL : /common/devicefault  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceType":"","errorCode":"","errorType":"","dateTime ":""}]}
+   | id:记录唯一id,sid:某系统唯一标记，固定1：视频监控 2：可视对讲 3：入侵警报 4：信息发布 5：门禁管理 6：车辆管理 7：电梯控制 8：广播通讯 9：电子巡更 10：人员定位systemId:系统id,deviceId:设备Id,deviceType:设备类型：比如camera/DVR,errorCode:故障码,errorType:故障类型1一般2严重（一般：可修，严重：需更换）,dateTime::故障时间
+ p URL : /common/devicefault  JSON: {"seckey":"","data":[{"id":"","sid":"","systemId":"","deviceId":"","deviceType":"","errorCode":"","errorType":"","dateTime ":""}]}
 
  p
   strong
    font(color='brown') 系统设备发生的异常报警记录:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceType:设备类型：比如camera/DVR,alarmCode:报警码,alarmType:报警级别1一般2重大3严重,dateTime:报警时间
- p URL : /common/devicealarm  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceType":"","alarmCode":"","alarmType":"","dateTime ":""}]}
+   | id:记录唯一id,sid:某系统唯一标记，固定1：视频监控 2：可视对讲 3：入侵警报 4：信息发布 5：门禁管理 6：车辆管理 7：电梯控制 8：广播通讯 9：电子巡更 10：人员定位,systemId:系统id,deviceId:设备Id,deviceType:设备类型：比如camera/DVR,alarmCode:报警码,alarmType:报警级别1一般2重大3严重,dateTime:报警时间
+ p URL : /common/devicealarm  JSON: {"seckey":"","data":[{"id":"","sid":"","systemId":"","deviceId":"","deviceType":"","alarmCode":"","alarmType":"","dateTime ":""}]}
 
  p
   strong
    font(color='brown') 视频监控设备的基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号），分摄像和DVR,position:设备所在区域类型1电梯2车库3道路4楼内通道5其他
- p URL : /videoMonitor/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","position":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号），分camera和dvr,position:设备所在区域类型1电梯2车库3道路4楼内通道5其他，status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /videoMonitor/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","position":"","status":""}]}
 
  p
   strong
    font(color='brown') 入侵报警设备的基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号），分摄像和DVR,position:设备所在区域类型1电梯2车库3道路4楼内通道5其他
- p URL : /alarm/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","sectorId":"","deviceProducter":"","deviceType":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号），分摄像和DVR,position:设备所在区域类型1电梯2车库3道路4楼内通道5其他status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /alarm/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","sectorId":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
   strong
@@ -93,15 +93,15 @@ block content
   strong
    font(color='brown') 入侵报警报警信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,sectorId:防区Id,alarmCode:报警码,alarmType:报警类型级别1一般2重大3严重,dateTime:报警时间
- p URL : /alarm/intrusion  JSON: {"seckey":"","data":[{"id":"","systemId":"","sectorId":"","alarmCode":"","alarmType":"","dateTime":""}]}
+   | id:记录唯一id,systemId:系统id,sectorId:防区Id,alarmCode:报警码,alarmType:报警类型级别1一般2重大3严重,dateTime:报警时间status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /alarm/intrusion  JSON: {"seckey":"","data":[{"id":"","systemId":"","sectorId":"","alarmCode":"","alarmType":"","dateTime":"","status":""}]}
 
  p
   strong
    font(color='brown') 门禁设备的基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）,buildingNO:设备楼号,unitNO:设备单元号,roomNO:设备房号
- p URL : /gate/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","buildingNO":"","unitNO":"","roomNO":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）,buildingNO:设备楼号,unitNO:设备单元号,roomNO:设备房号status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /gate/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","buildingNO":"","unitNO":"","roomNO":"","status":""}]}
 
  p
   strong
@@ -114,15 +114,15 @@ block content
   strong
    font(color='brown') 电梯控制设备的基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）,buildingNO:设备楼号,unitNO:设备单元号
- p URL : /elevator/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","buildingNO":"","unitNO":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）,buildingNO:设备楼号,unitNO:设备单元号status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /elevator/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","buildingNO":"","unitNO":"","status":""}]}
 
  p
   strong
    font(color='brown') 广播通讯设备基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）
- p URL : /broadcast/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /broadcast/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
   strong
@@ -133,10 +133,17 @@ block content
 
  p
   strong
+   font(color='brown') 广播通讯的分区信息:
+  font(color='green')
+   | id:记录唯一id(分区Id),systemId:系统id,status:是否在线0否，1是
+ p URL : /broadcast/area  JSON: {"seckey":"","data":[{"id":"","systemId":"","status":""}]}
+
+ p
+  strong
    font(color='brown') 信息发布设备基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）
- p URL : /infodiffusion/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /infodiffusion/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
   strong
@@ -149,8 +156,8 @@ block content
   strong
    font(color='brown') 人员定位设备基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）
- p URL : /personlocation/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /personlocation/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
   strong
@@ -163,15 +170,15 @@ block content
   strong
    font(color='brown') 人员定位卡报警信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,readerId:阅读器Id,iftId:地标器Id,cardId:卡Id（卡号）,alarmCode:报警码,alarmType:报警类型级别1一般2重大3严重4误报（按键报警或卡电量低报警）,dateTime::报警时间,empId:人员编号，报警人在系统中的编号,
+   | id:记录唯一id,systemId:系统id,readerId:阅读器Id,iftId:地标器Id,cardId:卡Id（卡号）,alarmCode:报警码,alarmType:报警类型级别 1按键报警2卡电量低报警）,dateTime::报警时间,empId:人员编号，报警人在系统中的编号,
  p URL : /personlocation/alarm  JSON: {"seckey":"","data":[{"id":"","systemId":"","readerId":"","iftId":"","cardId":"","alarmCode":"","alarmType":"","dateTime":"","empId":""}]}
 
  p
   strong
    font(color='brown') 停车场设备基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）
- p URL : /parking/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /parking/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
   strong
@@ -198,35 +205,42 @@ block content
   strong
    font(color='brown') 可视对讲设备基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）,buildingNO:设备楼号,unitNO:设备单元号,roomNO:设备房号,
- p URL : /videoinntercom/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","buildingNO":"","unitNO":"","roomNO":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）,buildingNO:设备楼号,unitNO:设备单元号,roomNO:设备房号,status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /videointercom/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","buildingNO":"","unitNO":"","roomNO":"","status":""}]}
 
  p
   strong
    font(color='brown') 可视对讲设备呼叫信息:
   font(color='green')
    | id:记录唯一id,systemId:系统id,senderDeviceId:主叫设备Id,receiverDeviceId:被叫设备Id,callUpdate:呼叫时间,duration:呼叫时长,buildingSN:楼栋编号,unit:单元编号,floor:楼层,room:房间号,callupStatus:呼叫状态0:未接通1:无人接听2:正常通话
- p URL : /videoinntercom/call  JSON: {"seckey":"","data":[{"id":"","systemId":"","senderDeviceId":"","receiverDeviceId":"","callUpdate":"","duration":"","buildingSN":"","unit":"","floor":"","room":"","callupStatus":""}]}
+ p URL : /videointercom/call  JSON: {"seckey":"","data":[{"id":"","systemId":"","senderDeviceId":"","receiverDeviceId":"","callUpdate":"","duration":"","buildingSN":"","unit":"","floor":"","room":"","callupStatus":""}]}
 
  p
   strong
    font(color='brown') 可视对讲单元门开门信息:
   font(color='green')
    | id:记录唯一id,systemId:系统id,buildingSN:楼栋编号,unit:单元编号,unitDoor:单元门编号,gateDeviceId:门口机设备Id,openGateMethod:开门方式：卡card/密码pwd/呼叫call/其他other,terminalDeviceId:呼叫终端设备Id,dateTime:开门时间
- p URL : /videoinntercom/opengate  JSON: {"seckey":"","data":[{"id":"","systemId":"","buildingSN":"","unit":"","unitDoor":"","gateDeviceId":"","openGateMethod":"","terminalDeviceId":"","dateTime":""}]}
+ p URL : /videointercom/opengate  JSON: {"seckey":"","data":[{"id":"","systemId":"","buildingSN":"","unit":"","unitDoor":"","gateDeviceId":"","openGateMethod":"","terminalDeviceId":"","dateTime":""}]}
 
  p
   strong
    font(color='brown') 电子巡更设备基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）
- p URL : /patrol/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号）status:状态：0停用（下线）1使用（在线）2故障3无效
+ p URL : /patrol/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
   strong
    font(color='brown') 电子巡更巡更记录信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,cardId:卡Id,dateTime:巡更时间,result:巡更结果：1合格，0不合格
- p URL : /patrol/nightrecord  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","cardId":"","dateTime":"","result":""}]}
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,cardId:卡Id,planTime:计划巡更时间dateTime:巡更时间,result:巡更结果：0未寻更，1合格，2不合格
+ p URL : /patrol/nightrecord  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","cardId":"","planTime":"","dateTime":"","result":""}]}
+
+ p
+  strong
+   font(color='brown') 物联系统统计获取:
+  font(color='green')
+   | role：角色分别为super/group/region/community,ids对应角色id
+ p URL : /devicestatus/systemstatistic  JSON: {"seckey":"","role":"","ids":["",""]}
 
 
