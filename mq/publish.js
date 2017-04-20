@@ -18,6 +18,7 @@ p.mutlipublish = function (destContents) {
             let destination =  destContent.destination;
             let content =  destContent.content;
             client.publish(destination,content);
+            client.disconnect();
             console.log('发布后'+destination+':'+content);
         }
     });
@@ -30,6 +31,7 @@ p.mutlipublish = function (destContents) {
 p.publish = function (destination,content) {
     client.connect(function(){
         client.publish(destination,content);
+        client.disconnect();
     });
 };
 module.exports = p;
