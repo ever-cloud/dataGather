@@ -12,6 +12,7 @@ let postgre = require("./utils/postgre");
 let redis = require("./utils/redis");
 let constUtils = require('./utils/constUtils');
 let log4js = require('./utils/logger');
+let initStatistics = require('./routes/base/initStatistics');
 
 let app = express();
 
@@ -42,35 +43,51 @@ app.use(express.static(path.join(__dirname, 'public')));
 fs.existsSync(path.resolve(__dirname,'logs')) || fs.mkdirSync(path.resolve(__dirname,'logs'));
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
-let log=log4js.config(jsName,logName);
+let log=log4js.config(__dirname,jsName,logName);
 
 
 //初始化物联十系统信息入redis开始
-let sql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by deptid,systemid';
-postgre.excuteSql(sql,[],function (result){
+let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,sid';
+postgre.excuteSql(systeminfoSql,[],function (result){
     if(result.rowCount>0){
         let systeminfoJson = [];
         let communityId = '';
         result.rows.forEach(function(data,index){
             if(index===0){
-                communityId = data.deptid;
+                communityId = data.communityid;
             }
-            if(communityId != data.deptid){
+            if(communityId != data.communityid){
                 systeminfoJson = [];
-                communityId = data.deptid;
+                communityId = data.communityid;
             }
             systeminfoJson.push(data);
             redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
         });
     }
 });
+//系统id对应系统设备信息表名
+let systemMapTableSql='select * from p_systemmaptable order by cast(sid as INTEGER)';
+postgre.excuteSql(systemMapTableSql,[],function (result){
+    if(result.rowCount>0){
+        result.rows.forEach(function(data,index){
+            redis.hset('p_systemmaptable',data.sid,data.tablename);
+        });
+    }
+});
 //初始化物联十系统信息入redis结束
+//初始化统计物联系统，按社区，大区，集团，海尔存放目前12块信息,开始
+let initstatistics = new initStatistics();
+    initstatistics.createStatistics();
+    initstatistics.publishTopic();
+
+//初始化统计结束
 //拦域所有URL并验证
 app.use(function (req, res, next) {
     /*
      验证seckey有效性，合法的seckey 存在redis中，此验证只需要从redis中查询是否存在即可。
      */
     function  verify(seckey) {
+
         if(seckey === undefined || seckey === null || seckey === ""){
             return false;
         }else{
@@ -78,11 +95,24 @@ app.use(function (req, res, next) {
             return seckeyPool.exists();
         }
     }
+    //不需要验证的路由地址
+    function notcheckurl(path){
+        let paths=[];
+        let result = false;
+            if(paths.length>0){
+                paths.forEach(function(comparePath){
+                    if(path==comparePath)
+                        result = true;
+                        return;
+                });
+            }
+            return result;
+    }
     //仅拦截restful请求
     let contentType = req.get('Content-Type');
     if(contentType === 'application/json;charset=UTF-8'){
         let path = req.url;
-        if (path!='/login') {
+        if (path!='/login' && !notcheckurl(path)) {
             let obj = req.body;
             if (!verify(obj.seckey)) {
                 res.send('{"code":4003,"msg":"无效的seckey，请重新登录！"}');
@@ -154,6 +184,8 @@ app.use('/broadcast', broadcast_deviceinfo);
 //广播通讯广播的记录信息
 let broadcast_record = require('./routes/business/broadcast_record');
 app.use('/broadcast', broadcast_record);
+let broadcast_area = require('./routes/business/broadcast_area');
+app.use('/broadcast', broadcast_area);
 
 //信息发布设备基本信息
 let infodiffusion_deviceinfo = require('./routes/business/infodiffusion_deviceinfo');
@@ -186,13 +218,13 @@ let parking_carrecord = require('./routes/business/parking_carrecord');
 app.use('/parking', parking_carrecord);
 
 //可视对讲设备基本信息
-let videoinntercom_deviceinfo = require('./routes/business/videoinntercom_deviceinfo');
+let videoinntercom_deviceinfo = require('./routes/business/videointercom_deviceinfo');
 app.use('/videoinntercom', videoinntercom_deviceinfo);
 //可视对讲设备呼叫信息
-let videoinntercom_call = require('./routes/business/videoinntercom_call');
+let videoinntercom_call = require('./routes/business/videointercom_call');
 app.use('/videoinntercom', videoinntercom_call);
 //可视对讲单元门开门信息
-let videoinntercom_opengate = require('./routes/business/videoinntercom_opengate');
+let videoinntercom_opengate = require('./routes/business/videointercom_opengate');
 app.use('/videoinntercom', videoinntercom_opengate);
 
 //电子巡更设备基本信息
@@ -202,6 +234,12 @@ app.use('/patrol', patrol_deviceinfo);
 let patrol_nightrecord = require('./routes/business/patrol_nightrecord');
 app.use('/patrol', patrol_nightrecord);
 
+//物联系统设备状态统计获取接口（前端从redis中拉取所需数据)
+let systemstatistic = require('./routes/business/systemstatistic');
+app.use('/devicestatus', systemstatistic);
+//物联系统概览设备状态统计获取接口（前端从redis中拉取所需数据)
+let devicestatus = require('./routes/business/devicestatus');
+app.use('/mainpage', devicestatus);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

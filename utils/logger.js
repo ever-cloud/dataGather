@@ -12,11 +12,13 @@ let moment = require('moment');
 *
  */
 let log4jLogger = {};
-log4jLogger.config = function(jsName,logName){
+log4jLogger.config = function(prepath,jsName,logName){
         if(jsName==null || jsName=='' || jsName == undefined)
             jsName = 'default';
         let curdate = moment().format('YYYY-MM-DD');
-        let accessLogPath = path.resolve('logs',curdate);
+        // console.log('测试下路径'+prepath+jsName+logName)
+        let accessLogPath = path.resolve(prepath,'logs',curdate);
+    // console.log('测试下軿凑后的路径'+accessLogPath)
         fs.existsSync(accessLogPath) || fs.mkdirSync(accessLogPath);
         if(logName==null || logName=='' || logName == undefined)
             logName = curdate;

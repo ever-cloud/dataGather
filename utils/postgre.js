@@ -43,7 +43,7 @@ postgredb.excuteSql = function(sql,params, callback){
         client.query(sql,params, function(err, result) {
             done();// 释放连接（将其返回给连接池）
             if(err) {
-                return console.error('数据库操作出错,操作类型：'+optType, err);
+                return console.error('数据库操作出错,操作类型：'+optType+'；语句：'+sql, err);
             }
             console.log(optType+' Execute Success;Current Time:'+new Date().toLocaleString());
             console.log(optType+' Recorde Num: ' + result.rowCount + ' Row!');

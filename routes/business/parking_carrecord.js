@@ -14,7 +14,7 @@ let logName = jsName.replace('\.js','\.log');
  *
  */
 router.use('/carrecord', function(req, res, next) {
-    let log=log4js.config(jsName,logName);
+    let log=log4js.config(__dirname+'/../../',jsName,logName);
     let json = req.body;
     let seckey = json.seckey;
      seckeyPool.get(seckey,function(loginuser) {

@@ -5,7 +5,7 @@ let publisher = require("../../mq/publish");
 let constUtils = require('../../utils/constUtils');
 let moment = require('moment');
 let log4js = require('../../utils/logger');
-let destination = constUtils.QUEUE_P_VIDEOINNTERCOM_CALL;
+let destination = constUtils.QUEUE_P_BROADCAST_AREA;
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
 /* GET users listing.
@@ -13,19 +13,19 @@ let logName = jsName.replace('\.js','\.log');
  *
  *
  */
-router.use('/call', function(req, res, next) {
-    let log=log4js.config(jsName,logName);
+router.use('/area', function(req, res, next) {
+    let log=log4js.config(__dirname+'/../../',jsName,logName);
     let json = req.body;
     let seckey = json.seckey;
      seckeyPool.get(seckey,function(loginuser) {
 			loginuser=JSON.parse(loginuser);
-        loginuser['tableName'] = constUtils.TABLE_P_VIDEOINNTERCOM_CALL;
+        loginuser['tableName'] = constUtils.TABLE_P_BROADCAST_AREA;
         json['userInfo'] =loginuser;
         json['optDate'] = moment().format('YYYY-MM-DD');
         publisher.publish(destination,JSON.stringify(json));
         log.info(loginuser,json);
     });
-    res.send('{"code":'+constUtils.WORK_UPLOAD_SUCCESS+',"msg":"[可视开门系统对讲记录信息]数据上传ActiveMq成功！"} 上传时间:'+moment().format('YYYY-MM-DD hh:mm:ss'));
+    res.send('{"code":'+constUtils.WORK_UPLOAD_SUCCESS+',"msg":"[广播通讯系统广播分区信息]数据上传ActiveMq成功！"} 上传时间:'+moment().format('YYYY-MM-DD hh:mm:ss'));
 
 });
 

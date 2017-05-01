@@ -3,7 +3,7 @@
  */
 var config = {};
 var PropertiesReader = require('properties-reader');
-var properties = PropertiesReader('./properties/config.properties');
+var properties = PropertiesReader(__dirname+'/config.properties');
 
 config.get = function(key){
     return properties.get(key);
