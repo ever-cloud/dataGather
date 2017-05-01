@@ -644,7 +644,6 @@ function initStatistics(){
                             middleObj['stat:c:'+data.communityid].devicesta.offline+=offline;
                             middleObj['stat:c:'+data.communityid].devicesta.bug+=bug;
                             middleObj['stat:c:'+data.communityid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:c:'+data.communityid,'devicesta',JSON.stringify(middleObj['stat:c:'+data.communityid].devicesta));
                             redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
                                 middleObj['stat:r:' + deptid].gate.sum += sum;
                                 middleObj['stat:r:' + deptid].gate.bug += bug;
@@ -1016,7 +1015,6 @@ function initStatistics(){
                                 middleObj['stat:h:' + deptid].devicesta.bug+=bug;
                                 middleObj['stat:h:' + deptid].devicesta.nobug+=sum-bug;
                                 redis.hset('stat:h:' + deptid,'devicesta',JSON.stringify(middleObj['stat:h:' + deptid].devicesta));
-
                             });
                         }
 
@@ -1355,7 +1353,6 @@ function initStatistics(){
         });
 
     };
-
 }
 
 module.exports = initStatistics;

@@ -9,7 +9,6 @@ var async = require('async');
 //let client =  redis.createClient('6379', '192.168.3.239');
 let client =  redis.createClient('6379', '101.37.169.160');
 //  let client =  redis.createClient('6379', '192.168.1.106');
-
 client.on("error", function (err) {
     console.log("Error :" , err);
 });
