@@ -18,14 +18,28 @@ router.use('/', function(req, res, next) {
     let json = req.body;
     let userId = json.data[0].userId;
     let password = json.data[0].password;
-    postgre.excuteSql('select ta.account as "userId",ta.password,taa.communityid as "communityId"  FROM t_admin ta left join t_admin_authority taa on ta.id=taa.adminid where ta.account = $1 ',[userId],function(result) {
+    let type =  json.data[0].type; //区分是管理员还是接口上报人员
+    let isInterfaceManager=false;
+    let sql='';
+    if(type != undefined && type=='manager'){
+        sql='select ta.account as "userId",ta.password,taa.communityid as "communityId"  FROM t_admin ta left join t_admin_authority taa on ta.id=taa.adminid where ta.account = $1 ';
+    }else{
+        sql='select t.userid as "userId",t.pass as "password",t.id as "communityId"  FROM t_community t  where t.userid = $1 ';
+        isInterfaceManager = true;
+    }
+    postgre.excuteSql(sql,[userId],function(result) {
         if(result.rowCount>0){
             if(password === result.rows[0].password){
                 seckeyPool.add(userId,JSON.stringify(result.rows[0]),function (result) {
-                    log.info('{"code":1001,"seckey":"'+result+'","msg":"登录成功！","userId":'+userId+'}');
-                    res.send('{"code":1001,"seckey":"'+result+'","msg":"登录成功！"}');
-                });
+                    if(isInterfaceManager){
+                        log.info('{"code":1001,"seckey":"'+result+'","msg":"物联接口用户登录成功！","userId":'+userId+'}');
+                        res.send('{"code":1001,"seckey":"'+result+'","msg":"物联接口用户登录成功！"}');
+                    }else{
+                        log.info('{"code":1001,"seckey":"'+result+'","msg":"管理员登录成功！","userId":'+userId+'}');
+                        res.send('{"code":1001,"seckey":"'+result+'","msg":"管理员登录成功！"}');
+                    }
 
+                });
             }else{
                 log.info('{"code":'+constUtils.WORK_LOGIN_PASSERR+',"msg":"密码不正确！","userId":'+userId+'}');
                 res.send('{"code":'+constUtils.WORK_LOGIN_PASSERR+',"msg":"密码不正确！"}');

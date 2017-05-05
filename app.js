@@ -47,7 +47,7 @@ let log=log4js.config(__dirname,jsName,logName);
 
 
 //初始化物联十系统信息入redis开始
-let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,sid';
+let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,cast(sid as integer)';
 postgre.excuteSql(systeminfoSql,[],function (result){
     if(result.rowCount>0){
         let systeminfoJson = [];
@@ -57,10 +57,12 @@ postgre.excuteSql(systeminfoSql,[],function (result){
                 communityId = data.communityid;
             }
             if(communityId != data.communityid){
+                redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
                 systeminfoJson = [];
                 communityId = data.communityid;
             }
             systeminfoJson.push(data);
+            if(index==result.rows.length-1)
             redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
         });
     }
@@ -92,7 +94,7 @@ app.use(function (req, res, next) {
             return false;
         }else{
             //查询redis是否存在
-            return seckeyPool.exists();
+            return seckeyPool.exists(seckey);
         }
     }
     //不需要验证的路由地址

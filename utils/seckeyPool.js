@@ -18,7 +18,7 @@ seckeyPool.get = function (seckey,callback) {
             console.log(err);
         }
         callback(result);
-    });
+    },'seckeyPool.js,seckeyPool.get');
 };
 
 seckeyPool.exists = function (seckey) {

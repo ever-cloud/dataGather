@@ -5,10 +5,14 @@
 let redisdb = {};
 let redis = require("redis");
 var async = require('async');
+let rds_opt={auth_pass:'redis01@test'};
 // let client =  redis.createClient('6379', '127.0.0.1');
-//let client =  redis.createClient('6379', '192.168.3.239');
-let client =  redis.createClient('6379', '101.37.169.160');
+let client =  redis.createClient('6379', '192.168.3.239');
+// let client =  redis.createClient('6379', '101.37.169.160',rds_opt);
 //  let client =  redis.createClient('6379', '192.168.1.106');
+// client.auth('redis01@test',function () {
+//     console.log('密码认证通过')
+// });
 client.on("error", function (err) {
     console.log("Error :" , err);
 });
@@ -47,14 +51,18 @@ redisdb.set = function(key,value,expire){
  * @param key 键
  * @param callback(err,result)
  */
-redisdb.get = function(key,callback){
+redisdb.get = function(key,callback,note){
       client.get(key, function(err,result){
         if (err) {
             console.log(err);
             callback(err,null);
             return;
         }
-        console.log('redis get execute success!get item is:' + key + '=>' + result);
+        if(note !=undefined){
+            console.log('redis get execute success!get item is:' + key + '=>' + result+'!提示：'+note);
+        }else{
+            console.log('redis get execute success!get item is:' + key + '=>' + result);
+        }
         callback(null,result);
     });
 };

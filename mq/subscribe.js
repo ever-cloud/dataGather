@@ -30,9 +30,16 @@ client_systembasicinfo.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
+            let dataindex=0;
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
+                        dataindex++;
+                        if(dataindex===data.length){
+                            handle.sysinfo(deptId);
+
+                        }
+
                 });
             }
         }else{
@@ -62,7 +69,7 @@ client_systemstatusinfo.connect(function() {
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {});
-					let updateSysteminfoSql='update '+constUtils.TABLE_P_SYSTEMINFO+' set status=$1 where deptid=$2 and systemid=$3';
+					let updateSysteminfoSql='update '+constUtils.TABLE_P_SYSTEMINFO+' set status=$1 where communityid=$2 and systemid=$3';
 					let updateParams=[];
                     updateParams.push(jsondate.status);
                     updateParams.push(deptId);
@@ -103,13 +110,13 @@ client_devicestatusinfo.connect(function() {
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(isInserted) {
 					    if(isInserted){
-                            let updatedeviceinfoSql='update '+sysdevicetables[jsondate.sid]+' set status=$1 where deptid=$2 and systemid=$3 and deviceid=$4';
+                            let updatedeviceinfoSql='update '+sysdevicetables[jsondate.sid]+' set status=$1 where communityid=$2 and systemid=$3 and deviceid=$4';
                             let updateParams=[];
                             updateParams.push(jsondate.status);
                             updateParams.push(deptId);
                             updateParams.push(jsondate.systemId);
                             updateParams.push(jsondate.deviceId);
-                            postgre.excuteSql(updateSysteminfoSql,updateParams,function(result) {
+                            postgre.excuteSql(updatedeviceinfoSql,updateParams,function(result) {
                                 dataindex++;
                                 if(dataindex===data.length){
                                     handle.stat(deptId,'devicestatus');

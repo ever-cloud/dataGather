@@ -23,11 +23,17 @@ router.use('/getsysteminfo', function(req, res, next) {
     seckeyPool.get(seckey,function(loginuser) {
         loginuser=JSON.parse(loginuser);
         communityId = loginuser.communityId;
-        console.log('当前用户的社区是'+communityId+',即将获取此社区十大物联系统信息！');
-        redis.hget(key,communityId,function(err,systeminfo){
-            log.info('用户信息：',loginuser,'系统信息：',systeminfo);
-            res.send(systeminfo);
-        });
+        if(communityId != undefined && communityId != null){
+            console.log('当前用户的社区是'+communityId+',即将获取此社区十大物联系统信息！');
+            redis.hget(key,communityId,function(systeminfo){
+                log.info('用户信息：',loginuser,'系统信息：',systeminfo);
+                res.send('{"code":'+constUtils.WORK_QUERY_SUCCESS+',"msg":'+systeminfo+'}');
+
+            });
+        }else{
+            console.log('当前用户未分配社区,无法将获取此社区十大物联系统信息！');
+            res.send('{"code":'+constUtils.WORK_QUERY_FAIL+',"msg":当前用户未分配社区,无法将获取此社区十大物联系统信息！}');
+        }
     });
 
 });
