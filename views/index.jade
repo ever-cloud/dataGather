@@ -7,7 +7,7 @@ block content
  p Url地址:
            input( id='url' name='url' value='/login' size='80')
  p Json信息:
-            textarea(id='result' rows='10' cols='100') {"seckey":"","data":[{"userId":"admin","password":"123456"}]}
+            textarea(id='result' rows='10' cols='100') {"seckey":"","data":[{"userId":"fa279b99a1ccc550b4c16e43be95c74c","password":"d0e5433f4a8d86c5fd34a4d3067fb059"}]}
  div(style={'text-align':'center'})
             input( type='button' onclick="send()" value='send')
  p
@@ -17,7 +17,7 @@ block content
  p
   h2(style={'text-align':'center'})   消息体报文例子
  p(style={color:'brown'}) 用户登录:userId:用户名,password:用户密码
- p URL : /login  JSON: {"seckey":"","data":[{"userId":"zs","password":"zs"}]}
+ p URL : /login  JSON: {"seckey":"","data":[{"userId":"fa279b99a1ccc550b4c16e43be95c74c","password":"d0e5433f4a8d86c5fd34a4d3067fb059"}]}
 
  p
   strong
@@ -51,8 +51,8 @@ block content
   strong
    font(color='brown') 设备的故障码或报警码信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,type:类型：1：故障，2：报警,code:代码,name:名称
- p URL : /common/erroralarmcode  JSON: {"seckey":"","data":[{"id":"","systemId":"","type":"","code":"","name":""}]}
+   | id:记录唯一id,systemId:系统id,type:类型：1：故障 2：报警,code:代码,name:名称,opttype:操作方式:add增 delete删 update改,used:是否有效:0无效 1有效
+ p URL : /common/erroralarmcode  JSON: {"seckey":"","data":[{"id":"","systemId":"","type":"","code":"","name":"","opttype":"","used":""}]}
 
  p
   strong
@@ -79,7 +79,7 @@ block content
   strong
    font(color='brown') 入侵报警设备的基本信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,deviceProducter:设备厂商,deviceType:设备类型（型号），分摄像和DVR,position:设备所在区域类型1电梯2车库3道路4楼内通道5其他status:状态：0停用（下线）1使用（在线）2故障3无效
+   | id:记录唯一id,systemId:系统id,deviceId:设备Id,deviceName:设备名称,sectorId:区域id，deviceProducter:设备厂商,deviceType:设备类型（型号），status:状态：0停用（下线）1使用（在线）2故障3无效
  p URL : /alarm/deviceinfo  JSON: {"seckey":"","data":[{"id":"","systemId":"","deviceId":"","deviceName":"","sectorId":"","deviceProducter":"","deviceType":"","status":""}]}
 
  p
@@ -93,8 +93,8 @@ block content
   strong
    font(color='brown') 入侵报警报警信息:
   font(color='green')
-   | id:记录唯一id,systemId:系统id,sectorId:防区Id,alarmCode:报警码,alarmType:报警类型级别1一般2重大3严重,dateTime:报警时间status:状态：0停用（下线）1使用（在线）2故障3无效
- p URL : /alarm/intrusion  JSON: {"seckey":"","data":[{"id":"","systemId":"","sectorId":"","alarmCode":"","alarmType":"","dateTime":"","status":""}]}
+   | id:记录唯一id,systemId:系统id,sectorId:防区Id,alarmCode:报警码,alarmType:报警类型级别1一般2重大3严重,dateTime:报警时间
+ p URL : /alarm/intrusion  JSON: {"seckey":"","data":[{"id":"","systemId":"","sectorId":"","alarmCode":"","alarmType":"","dateTime":""}]}
 
  p
   strong
@@ -164,7 +164,7 @@ block content
    font(color='brown') 人员定位定位卡信息信息:
   font(color='green')
    | id:记录唯一id,systemId:系统id,cardId:卡Id（卡号）,name:持卡人名称,type:持卡人象类型：1–工作人员；2–访客；3–业主或者老人,dateTime::发卡时间
- p URL : /personlocation/givecard  JSON: {"seckey":"","data":[{"id":"","systemId":"","cardId":"","name":"","type":"","dateTime ":""}]}
+ p URL : /personlocation/givecard  JSON: {"seckey":"","data":[{"id":"","systemId":"","cardId":"","name":"","type":"","dateTime":""}]}
 
  p
   strong

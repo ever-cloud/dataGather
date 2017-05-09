@@ -37,7 +37,6 @@ client_systembasicinfo.connect(function() {
                         dataindex++;
                         if(dataindex===data.length){
                             handle.sysinfo(deptId);
-
                         }
 
                 });
@@ -65,6 +64,12 @@ client_systemstatusinfo.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
+            let new_systeminfo=[];
+            redis.hget(constUtils.TABLE_P_SYSTEMINFO,deptId,(systeminfo)=>{
+                if(systeminfo !=undefined && systeminfo != null){
+                    new_systeminfo=JSON.parse(systeminfo);
+                }
+            });
             let i=0;
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
@@ -75,6 +80,13 @@ client_systemstatusinfo.connect(function() {
                     updateParams.push(deptId);
                     updateParams.push(jsondate.systemId);
 					postgre.excuteSql(updateSysteminfoSql,updateParams,function(result) {
+                    for(let i=0;i<new_systeminfo.length;i++){
+                        if(new_systeminfo[i].communityid==deptId && new_systeminfo[i].systemid==jsondate.systemId){
+                            new_systeminfo[i]['status']=jsondate.status;
+
+                        }
+                    }
+                    redis.hset(constUtils.TABLE_P_SYSTEMINFO,deptId,JSON.stringify(new_systeminfo));
                     i++;
                     if(i===data.length){
                         handle.stat(deptId,'online');
@@ -104,6 +116,7 @@ client_devicestatusinfo.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
+            let typearrays=[];
             let sysdevicetables=['','p_videomonitor_deviceinfo','p_videointercom_deviceinfo','p_alarm_deviceinfo','p_infodiffusion_deviceinfo','p_gate_deviceinfo','p_parking_deviceinfo','p_elevator_deviceinfo','p_broadcast_deviceinfo','p_patrol_deviceinfo','p_personlocation_deviceinfo'];
             let dataindex=0;
             for(let jsondate of data){
@@ -116,10 +129,13 @@ client_devicestatusinfo.connect(function() {
                             updateParams.push(deptId);
                             updateParams.push(jsondate.systemId);
                             updateParams.push(jsondate.deviceId);
+                            if(typearrays.indexOf(sysdevicetables[jsondate.sid]) == -1){
+                                typearrays.push(sysdevicetables[jsondate.sid]);
+                            }
                             postgre.excuteSql(updatedeviceinfoSql,updateParams,function(result) {
                                 dataindex++;
                                 if(dataindex===data.length){
-                                    handle.stat(deptId,'devicestatus');
+                                    handle.stat(deptId,'devicestatus',typearrays);
                                     initstatistics.publishTopic();
                                 }
                             });
@@ -176,15 +192,26 @@ client_devicefault.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
+            let sysdevicetables=['','p_videomonitor_deviceinfo','p_videointercom_deviceinfo','p_alarm_deviceinfo','p_infodiffusion_deviceinfo','p_gate_deviceinfo','p_parking_deviceinfo','p_elevator_deviceinfo','p_broadcast_deviceinfo','p_patrol_deviceinfo','p_personlocation_deviceinfo'];
             let dataindex=0;
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
-					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
-                    dataindex++;
-                    if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus');
-                        initstatistics.publishTopic();
-                    }
+					postgre.excuteSql(insertJson.sql,insertJson.values,function(isInserted) {
+                        if(isInserted){
+                            let updatedeviceinfoSql='update '+sysdevicetables[jsondate.sid]+' set status=\'2\' where communityid=$1 and systemid=$2 and deviceid=$3';
+                            let updateParams=[];
+                            updateParams.push(deptId);
+                            updateParams.push(jsondate.systemId);
+                            updateParams.push(jsondate.deviceId);
+                            postgre.excuteSql(updatedeviceinfoSql,updateParams,function(result) {
+                                dataindex++;
+                                if(dataindex===data.length){
+                                    handle.stat(deptId,'devicestatus');
+                                    initstatistics.publishTopic();
+                                }
+                            });
+                        }
+
                 });
             }
         }else{
@@ -276,7 +303,6 @@ client_alarm_deviceinfo.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
-            console.log('数据内容长度'+data.length);
             let dataindex = 0;
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
@@ -511,6 +537,35 @@ client_broadcast_record.connect(function() {
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     
+                });
+            }
+        }else{
+            console.log('No Transfer Body!Body is Null!');
+        }
+    });
+});
+//广播通讯广播的分区
+let client_broadcast_area = new Stomp(host,port,user,pwd);
+client_broadcast_area.connect(function() {
+    let destination = constUtils.QUEUE_P_BROADCAST_AREA;
+    client_broadcast_area.subscribe(destination, function(body, headers) {
+        if (body){
+			let extendJson={};
+            let json = JSON.parse(body);
+            let deptId = json.userInfo.communityId;
+			let tableName=json.userInfo.tableName;
+			extendJson['communityid'] = deptId;
+            extendJson['opter'] = json.userInfo.userId;
+            extendJson['optDate'] = json.optDate;
+            let data = json.data;
+            if(data.length>1000){
+                console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
+            }
+
+            for(let jsondate of data){
+                    let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
+					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
+
                 });
             }
         }else{

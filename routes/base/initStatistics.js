@@ -1148,7 +1148,7 @@ function initStatistics(){
                     });
                 }
             });
-            postgre.excuteSql(broadcastbroadSql,[],function (result){
+            postgre.excuteSql(broadcastsectionSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
                         let onlinearea=+data.onlinearea;
@@ -1178,7 +1178,7 @@ function initStatistics(){
                 }
             });
 
-            postgre.excuteSql(broadcastsectionSql,[],function (result){
+            postgre.excuteSql(broadcastbroadSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
                         let onlinesum=+data.onlinesum;

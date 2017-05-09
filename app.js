@@ -8,6 +8,7 @@ let cookieParser = require('cookie-parser');
 let bodyParser = require('body-parser');
 let seckeyPool = require("./utils/seckeyPool");
 let subscribe = require("./mq/subscribe");
+// let publish = require('./mq/publish');
 let postgre = require("./utils/postgre");
 let redis = require("./utils/redis");
 let constUtils = require('./utils/constUtils');
@@ -221,13 +222,13 @@ app.use('/parking', parking_carrecord);
 
 //可视对讲设备基本信息
 let videoinntercom_deviceinfo = require('./routes/business/videointercom_deviceinfo');
-app.use('/videoinntercom', videoinntercom_deviceinfo);
+app.use('/videointercom', videoinntercom_deviceinfo);
 //可视对讲设备呼叫信息
 let videoinntercom_call = require('./routes/business/videointercom_call');
-app.use('/videoinntercom', videoinntercom_call);
+app.use('/videointercom', videoinntercom_call);
 //可视对讲单元门开门信息
 let videoinntercom_opengate = require('./routes/business/videointercom_opengate');
-app.use('/videoinntercom', videoinntercom_opengate);
+app.use('/videointercom', videoinntercom_opengate);
 
 //电子巡更设备基本信息
 let patrol_deviceinfo = require('./routes/business/patrol_deviceinfo');

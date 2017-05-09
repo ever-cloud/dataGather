@@ -17,15 +17,21 @@ router.use('/intrusion', function(req, res, next) {
     let log=log4js.config(__dirname+'/../../',jsName,logName);
     let json = req.body;
     let seckey = json.seckey;
-     seckeyPool.get(seckey,function(loginuser) {
-			loginuser=JSON.parse(loginuser);
-        loginuser['tableName'] = constUtils.TABLE_P_ALARM_INTRUSION;
-        json['userInfo'] =loginuser;
-        json['optDate'] = moment().format('YYYY-MM-DD');
-        publisher.publish(destination,JSON.stringify(json));
-        log.info(loginuser,json);
-    });
-    res.send('{"code":'+constUtils.WORK_UPLOAD_SUCCESS+',"msg":"[入侵报警系统报警信息]数据上传ActiveMq成功！"} 上传时间:'+moment().format('YYYY-MM-DD hh:mm:ss'));
+    if(seckey!='' && seckey!=undefined && seckey!=null) {
+        seckeyPool.get(seckey, function (loginuser) {
+            if (loginuser != null) {
+                loginuser = JSON.parse(loginuser);
+                loginuser['tableName'] = constUtils.TABLE_P_ALARM_INTRUSION;
+                json['userInfo'] = loginuser;
+                json['optDate'] = moment().format('YYYY-MM-DD');
+                publisher.publish(destination, JSON.stringify(json));
+                log.info(loginuser, json);
+                res.send('{"code":' + constUtils.WORK_UPLOAD_SUCCESS + ',"msg":"[入侵报警系统报警信息]数据上传ActiveMq成功！"} 上传时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
+            }else{
+                res.send('{"code":' + constUtils.WORK_QUERY_FAIL + ',"msg":"[入侵报警系统报警信息]无效seckey，操作不成功！"} 时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
+            }
+        });
+    }
 
 });
 

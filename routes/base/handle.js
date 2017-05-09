@@ -27,7 +27,7 @@ let _sysinfo=function(communityids){
                     result.rows.forEach(function(data,index){
                         systeminfoJson.push(data);
                         if(index==result.rows.length-1)
-                            redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityid,JSON.stringify(systeminfoJson));
+                            redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityids,JSON.stringify(systeminfoJson));
                     });
                 }
             });
@@ -35,7 +35,7 @@ let _sysinfo=function(communityids){
     }
 }
 
-//communityid社区id  types需要统计类型  typearrays 统计系统类型
+//communityid社区id  types需要统计类型  typearrays 统计系统类型(根据情况传数组参数）
 //  online 系统在线状态统计
 let _stat=function(communityid,types,typearrays,cb){
     switch(types){
@@ -114,7 +114,7 @@ let _stat=function(communityid,types,typearrays,cb){
         case 'devicestatus'://统计设备数及故障数及在线数
             let systemtypes_2=['monitor','intercom','intrusion','info','gate','park','elevator','broadcast','patrol','location'];
             let sysdevicetables=['p_videomonitor_deviceinfo','p_videointercom_deviceinfo','p_alarm_deviceinfo','p_infodiffusion_deviceinfo','p_gate_deviceinfo','p_parking_deviceinfo','p_elevator_deviceinfo','p_broadcast_deviceinfo','p_patrol_deviceinfo','p_personlocation_deviceinfo'];
-            if(typearrays instanceof Array && typearrays.length > 0){
+            if(typearrays != undefined && typearrays instanceof Array && typearrays.length > 0){
                 let tempst=[];
                 sysdevicetables.forEach(function(item,index){
                     for(var i=0;i<typearrays.length;i++){
@@ -130,9 +130,9 @@ let _stat=function(communityid,types,typearrays,cb){
             let deviceinfosql='';
             sysdevicetables.forEach((deviceinfotable,dindex)=>{
                 if(deviceinfotable=='p_videomonitor_deviceinfo'){
-                    deviceinfosql='SELECT t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t where t.communityid=$1 and t.status<>\'3\' group by t.communityid';
+                    deviceinfosql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t where t.communityid=$1 and t.status<>\'3\' group by t.communityid';
                 }else{
-                    deviceinfosql='SELECT t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t where t.status<>\'3\' and t.communityid=$1 group by t.communityid ';
+                    deviceinfosql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t where t.status<>\'3\' and t.communityid=$1 group by t.communityid ';
                 }
                 postgre.excuteSql(deviceinfosql,[communityid],function (result){
                     if(result.rowCount>0){
@@ -159,47 +159,28 @@ let _stat=function(communityid,types,typearrays,cb){
                                         result.rows.forEach(function(data){
                                             if(systemtypes_2[dindex]==field){
                                                 if(field=='monitor'){
-                                                    let camerasum=data.camerasum;
-                                                    let camerabug=data.camerabug;
-                                                    let dvrsum=data.dvrsum;
-                                                    let dvrbug=data.dvrbug;
-                                                    let offline=data.offline;
-                                                    calinfo['camerasum']=camerasum-oldstatinfo[field].camerasum;
-                                                    calinfo['camerabug']=camerabug-oldstatinfo[field].camerabug;
-                                                    calinfo['dvrsum']=dvrsum-oldstatinfo[field].dvrsum;
-                                                    calinfo['dvrbug']=dvrbug-oldstatinfo[field].dvrbug;
-                                                    calinfo['online']=camerasum+dvrsum-offline-oldstatdevicesta.online;
-                                                    calinfo['offline']=offline-oldstatdevicesta.offline;
-                                                    calinfo['dbug']=camerabug+dvrbug-oldstatdevicesta.bug;
-                                                    calinfo['nobug']=camerasum+dvrsum-(camerabug+dvrbug)-oldstatdevicesta.nobug;
-                                                    console.log('#################2'+systemtypes_2[dindex]+field+JSON.stringify(oldstatinfo[field]));
+                                                    let camerasum=+data.camerasum;
+                                                    let camerabug=+data.camerabug;
+                                                    let dvrsum=+data.dvrsum;
+                                                    let dvrbug=+data.dvrbug;
+                                                    calinfo['camerasum']=+camerasum-oldstatinfo[field].camera.sum;
+                                                    calinfo['camerabug']=+camerabug-oldstatinfo[field].camera.bug;
+                                                    calinfo['dvrsum']=+dvrsum-oldstatinfo[field].dvr.sum;
+                                                    calinfo['dvrbug']=+dvrbug-oldstatinfo[field].dvr.bug;
                                                     oldstatinfo[field]['camera']['sum']=camerasum;
                                                     oldstatinfo[field]['camera']['bug']=camerabug;
                                                     oldstatinfo[field]['dvr']['sum']=dvrsum;
                                                     oldstatinfo[field]['dvr']['bug']=dvrbug;
                                                     if(oldstatsum[field] != undefined)
-                                                        oldstatsum[field]=oldstatsum[field]+calinfo['camerasum']+calinfo['dvrsum'];
+                                                        oldstatsum[field]=+oldstatsum[field]+calinfo['camerasum']+calinfo['dvrsum'];
                                                     if(oldstatbug[field] != undefined)
-                                                        oldstatbug[field]=oldstatbug[field]+calinfo['camerabug']+calinfo['dvrbug'];
-                                                    if(oldstatdevicesta['online'] != undefined)
-                                                        oldstatdevicesta['online']+=calinfo['online'];
-                                                    if(oldstatdevicesta['offline'] != undefined)
-                                                        oldstatdevicesta['offline']+=calinfo['offline'];
-                                                    if(oldstatdevicesta['bug'] != undefined)
-                                                        oldstatdevicesta['bug']+=calinfo['dbug'];
-                                                    if(oldstatdevicesta['nobug'] != undefined)
-                                                        oldstatdevicesta['nobug']+=calinfo['nobug'];
+                                                        oldstatbug[field]=+oldstatbug[field]+calinfo['camerabug']+calinfo['dvrbug'];
                                                 }else{
                                                     let sum=data.sum;
                                                     let bug=data.bug;
-                                                    let offline=data.offline;
                                                     calinfo['sum']=sum-oldstatinfo[field].sum;
                                                     calinfo['bug'] = bug - oldstatinfo[field].bug;
-                                                    calinfo['online']=sum-offline-oldstatdevicesta.online;
-                                                    calinfo['offline']=offline-oldstatdevicesta.offline;
-                                                    calinfo['dbug']=bug-oldstatdevicesta.bug;
-                                                    calinfo['nobug']=sum-bug-oldstatdevicesta.nobug;
-                                                    if(oldstatinfo[field].sum !=undefined && field !='intrusion' && field !='park'){
+                                                    if(oldstatinfo[field].sum !=undefined && field !='intrusion' && field !='park' && field != 'broadcast'){
                                                             oldstatinfo[field]['sum']=sum;
                                                     }
                                                     if(oldstatinfo[field].bug !=undefined) {
@@ -209,26 +190,12 @@ let _stat=function(communityid,types,typearrays,cb){
                                                         oldstatsum[field]=oldstatsum[field]+calinfo['sum'];
                                                     if(oldstatbug[field] != undefined)
                                                         oldstatbug[field]=oldstatbug[field]+calinfo['bug'];
-                                                    if(oldstatdevicesta['online'] != undefined)
-                                                        oldstatdevicesta['online']+=calinfo['online'];
-                                                    if(oldstatdevicesta['offline'] != undefined)
-                                                        oldstatdevicesta['offline']+=calinfo['offline'];
-                                                    if(oldstatdevicesta['bug'] != undefined)
-                                                        oldstatdevicesta['bug']+=calinfo['dbug'];
-                                                    if(oldstatdevicesta['nobug'] != undefined)
-                                                        oldstatdevicesta['nobug']+=calinfo['nobug'];
-
                                                 }
                                                 redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatinfo[field]));
+                                                redis.hset('stat:c:'+communityid,'sum',JSON.stringify(oldstatsum));
+                                                redis.hset('stat:c:'+communityid,'bug',JSON.stringify(oldstatbug));
                                             }
                                         });
-                                        if(field=='sum'){
-                                            redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatsum));
-                                        }else if(field=='bug'){
-                                            redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatbug));
-                                        }else if(field=='devicesta'){
-                                            redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatdevicesta));
-                                        }
                                     });
                                 });
 
@@ -260,7 +227,6 @@ let _stat=function(communityid,types,typearrays,cb){
                                                         oldstatsum[field]=oldstatsum[field]+calinfo['camerasum']+calinfo['dvrsum'];
                                                     if(oldstatbug[field] != undefined)
                                                         oldstatbug[field]=oldstatbug[field]+calinfo['camerabug']+calinfo['dvrbug'];
-                                                    
                                                 }else{
                                                     if(oldstatinfo[field].sum !=undefined && field !='intrusion' && field !='park'){
                                                         oldstatinfo[field]['sum']=+oldstatinfo[field]['sum']+calinfo['sum'];
@@ -272,23 +238,12 @@ let _stat=function(communityid,types,typearrays,cb){
                                                         oldstatsum[field]=oldstatsum[field]+calinfo['sum'];
                                                     if(oldstatbug[field] != undefined)
                                                         oldstatbug[field]=oldstatbug[field]+calinfo['bug'];
+
                                                 }
-                                                if(oldstatdevicesta['online'] != undefined)
-                                                    oldstatdevicesta['online']+=calinfo['online'];
-                                                if(oldstatdevicesta['offline'] != undefined)
-                                                    oldstatdevicesta['offline']+=calinfo['offline'];
-                                                if(oldstatdevicesta['bug'] != undefined)
-                                                    oldstatdevicesta['bug']+=calinfo['dbug'];
-                                                if(oldstatdevicesta['nobug'] != undefined)
-                                                    oldstatdevicesta['nobug']+=calinfo['nobug'];
                                                 redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo[field]));
-                                            }
-                                            if(field=='sum'){
-                                                redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatsum));
-                                            }else if(field=='bug'){
-                                                redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatbug));
-                                            }else if(field=='devicesta'){
-                                                redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatdevicesta));
+                                                redis.hset('stat:r:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                redis.hset('stat:r:'+deptid,'bug',JSON.stringify(oldstatbug));
+
                                             }
                                         });
                                     });
@@ -333,23 +288,11 @@ let _stat=function(communityid,types,typearrays,cb){
                                                         oldstatsum[field]=oldstatsum[field]+calinfo['sum'];
                                                     if(oldstatbug[field] != undefined)
                                                         oldstatbug[field]=oldstatbug[field]+calinfo['bug'];
+
                                                 }
-                                                if(oldstatdevicesta['online'] != undefined)
-                                                    oldstatdevicesta['online']+=calinfo['online'];
-                                                if(oldstatdevicesta['offline'] != undefined)
-                                                    oldstatdevicesta['offline']+=calinfo['offline'];
-                                                if(oldstatdevicesta['bug'] != undefined)
-                                                    oldstatdevicesta['bug']+=calinfo['dbug'];
-                                                if(oldstatdevicesta['nobug'] != undefined)
-                                                    oldstatdevicesta['nobug']+=calinfo['nobug'];
                                                 redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo[field]));
-                                            }
-                                            if(field=='sum'){
-                                                redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatsum));
-                                            }else if(field=='bug'){
-                                                redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatbug));
-                                            }else if(field=='devicesta'){
-                                                redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatdevicesta));
+                                                redis.hset('stat:g:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                redis.hset('stat:g:'+deptid,'bug',JSON.stringify(oldstatbug));
                                             }
                                         });
                                     });
@@ -394,22 +337,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                                     if(oldstatbug[field] != undefined)
                                                         oldstatbug[field]=oldstatbug[field]+calinfo['bug'];
                                                 }
-                                                if(oldstatdevicesta['online'] != undefined)
-                                                    oldstatdevicesta['online']+=calinfo['online'];
-                                                if(oldstatdevicesta['offline'] != undefined)
-                                                    oldstatdevicesta['offline']+=calinfo['offline'];
-                                                if(oldstatdevicesta['bug'] != undefined)
-                                                    oldstatdevicesta['bug']+=calinfo['dbug'];
-                                                if(oldstatdevicesta['nobug'] != undefined)
-                                                    oldstatdevicesta['nobug']+=calinfo['nobug'];
                                                 redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo[field]));
-                                            }
-                                            if(field=='sum'){
-                                                redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatsum));
-                                            }else if(field=='bug'){
-                                                redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatbug));
-                                            }else if(field=='devicesta'){
-                                                redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatdevicesta));
+                                                redis.hset('stat:h:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                redis.hset('stat:h:'+deptid,'bug',JSON.stringify(oldstatbug));
                                             }
                                         });
                                     });
@@ -418,6 +348,76 @@ let _stat=function(communityid,types,typearrays,cb){
                         });
                     }
                 });
+            });
+            let statsysdevicetables=['p_videomonitor_deviceinfo','p_videointercom_deviceinfo','p_alarm_deviceinfo','p_infodiffusion_deviceinfo','p_gate_deviceinfo','p_parking_deviceinfo','p_elevator_deviceinfo','p_broadcast_deviceinfo','p_patrol_deviceinfo','p_personlocation_deviceinfo'];
+            let devicestatsql='select stat.communityid,sum(stat.online) as "online",sum(stat.offline) as "offline",sum(stat.bug) as "bug",sum(stat.nobug) as "nobug" from(';
+            statsysdevicetables.forEach((tablename,index)=>{
+                devicestatsql+='SELECT t.communityid,sum(1)-sum(case when t.status=\'0\'  then 1 else 0 end) as "online",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline",sum(case when  t.status=\'2\' then 1 else 0 end) as "bug",sum(1)-sum(case when  t.status=\'2\' then 1 else 0 end) as "nobug" FROM '+tablename+' t where t.communityid=$1 and t.status<>\'3\' group by t.communityid ';
+                if(index != statsysdevicetables.length-1){
+
+                    devicestatsql+=' union all ';
+                }else{
+                    devicestatsql+=') stat group by stat.communityid';
+                }
+            });
+            postgre.excuteSql(devicestatsql,[communityid],function (result){
+                if(result.rowCount>0){
+                    redis.exists('stat:c:'+communityid,(isexists)=>{
+                        if(isexists===1){
+                            let calinfo={};
+                            redis.hget('stat:c:'+communityid,'devicesta',(communitystats)=>{
+                                let oldstatdevicesta = JSON.parse(communitystats);
+                                    result.rows.forEach(function(data){
+                                        let online=+data.online;
+                                        let offline=+data.offline;
+                                        let bug=+data.bug;
+                                        let nobug=+data.nobug;
+                                        calinfo['online']=online-oldstatdevicesta.online;
+                                        calinfo['offline']=offline-oldstatdevicesta.offline;
+                                        calinfo['bug']=bug-oldstatdevicesta.bug;
+                                        calinfo['nobug']=nobug-oldstatdevicesta.nobug;
+                                        oldstatdevicesta['online']=online;
+                                        oldstatdevicesta['offline']=offline;
+                                        oldstatdevicesta['dbug']=bug;
+                                        oldstatdevicesta['nobug']=nobug;
+                                        redis.hset('stat:c:'+communityid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                    });
+                            });
+
+                            redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                redis.hget('stat:r:'+deptid,'devicesta',(regionstats)=>{
+                                    let oldstatdevicesta = JSON.parse(regionstats);
+                                    oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
+                                    oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
+                                    oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
+                                    oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
+                                    redis.hset('stat:r:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                    });
+                                });
+
+                            redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                redis.hget('stat:g:'+deptid,'devicesta',(groupstats)=>{
+                                    let oldstatdevicesta = JSON.parse(groupstats);
+                                    oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
+                                    oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
+                                    oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
+                                    oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
+                                    redis.hset('stat:g:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                });
+                            });
+                            redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                redis.hget('stat:h:'+deptid,'devicesta',(haierstats)=>{
+                                    let oldstatdevicesta = JSON.parse(haierstats);
+                                    oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
+                                    oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
+                                    oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
+                                    oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
+                                    redis.hset('stat:h:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                });
+                            });
+                        }
+                    });
+                }
             });
             break;
         case 'alarm'://统计报警数包括设备报警和实时报警
