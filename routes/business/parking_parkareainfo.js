@@ -23,7 +23,7 @@ router.use('/parkareainfo', function(req, res, next) {
             loginuser = JSON.parse(loginuser);
             loginuser['tableName'] = constUtils.TABLE_P_PARKING_PARKAREAINFO;
             json['userInfo'] = loginuser;
-            json['optDate'] = moment().format('YYYY-MM-DD');
+            json['optDate'] = moment().format('YYYY-MM-DD HH:mm:ss');
             publisher.publish(destination, JSON.stringify(json));
             log.info(loginuser, json);
             res.send('{"code":' + constUtils.WORK_UPLOAD_SUCCESS + ',"msg":"[停车场系统车位信息]数据上传ActiveMq成功！"} 上传时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));

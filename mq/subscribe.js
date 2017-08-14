@@ -89,8 +89,7 @@ client_systemstatusinfo.connect(function() {
                     redis.hset(constUtils.TABLE_P_SYSTEMINFO,deptId,JSON.stringify(new_systeminfo));
                     i++;
                     if(i===data.length){
-                        handle.stat(deptId,'online');
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'online',[],initstatistics.publishTopic(deptId));
                         }
                     });
             }
@@ -135,8 +134,7 @@ client_devicestatusinfo.connect(function() {
                             postgre.excuteSql(updatedeviceinfoSql,updateParams,function(result) {
                                 dataindex++;
                                 if(dataindex===data.length){
-                                    handle.stat(deptId,'devicestatus',typearrays);
-                                    initstatistics.publishTopic();
+                                    handle.stat(deptId,'devicestatus',typearrays,initstatistics.publishTopic(deptId));
                                 }
                             });
                         }
@@ -192,6 +190,7 @@ client_devicefault.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
+            let typearrays=[];
             let sysdevicetables=['','p_videomonitor_deviceinfo','p_videointercom_deviceinfo','p_alarm_deviceinfo','p_infodiffusion_deviceinfo','p_gate_deviceinfo','p_parking_deviceinfo','p_elevator_deviceinfo','p_broadcast_deviceinfo','p_patrol_deviceinfo','p_personlocation_deviceinfo'];
             let dataindex=0;
             for(let jsondate of data){
@@ -203,11 +202,13 @@ client_devicefault.connect(function() {
                             updateParams.push(deptId);
                             updateParams.push(jsondate.systemId);
                             updateParams.push(jsondate.deviceId);
+                            if(typearrays.indexOf(sysdevicetables[jsondate.sid]) == -1){
+                                typearrays.push(sysdevicetables[jsondate.sid]);
+                            }
                             postgre.excuteSql(updatedeviceinfoSql,updateParams,function(result) {
                                 dataindex++;
                                 if(dataindex===data.length){
-                                    handle.stat(deptId,'devicestatus');
-                                    initstatistics.publishTopic();
+                                    handle.stat(deptId,'devicestatus',typearrays,initstatistics.publishTopic(deptId));
                                 }
                             });
                         }
@@ -242,8 +243,8 @@ client_devicealarm.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex==data.length){
-                        handle.stat(deptId,'alarm',['elevator','intercom','gate']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'alarm',['elevator','intercom','gate'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -276,8 +277,7 @@ client_videomonitor_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_videomonitor_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_videomonitor_deviceinfo'],initstatistics.publishTopic(deptId));
                     }
                 });
             }
@@ -309,8 +309,8 @@ client_alarm_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_alarm_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_alarm_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -342,8 +342,8 @@ client_alarm_sectorinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'othersum',['intrusion']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'othersum',['intrusion'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -376,8 +376,8 @@ client_alarm_intrusion.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex==data.length){
-                        handle.stat(deptId,'alarm',['intrusion']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'alarm',['intrusion'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -409,8 +409,8 @@ client_gate_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_gate_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_gate_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -471,8 +471,8 @@ client_elevator_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_elevator_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_elevator_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -504,8 +504,8 @@ client_broadcast_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_broadcast_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_broadcast_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -532,11 +532,15 @@ client_broadcast_record.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
-
+            let dataindex = 0;
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
-                    
+                        dataindex++;
+                        if(dataindex===data.length){
+                            handle.stat(deptId,'broadcastinfo',[],initstatistics.publishTopic(deptId));
+
+                        }
                 });
             }
         }else{
@@ -561,11 +565,15 @@ client_broadcast_area.connect(function() {
             if(data.length>1000){
                 console.error('You Transfer Date More Than 1000 One Time ！Please Limit it!');
             }
-
+            let dataindex = 0;
             for(let jsondate of data){
                     let insertJson = postgre.getInsertDBSql(tableName,jsondate,extendJson);
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
+                        dataindex++;
+                        if(dataindex===data.length){
+                            handle.stat(deptId,'broadcastinfo',[],initstatistics.publishTopic(deptId));
 
+                        }
                 });
             }
         }else{
@@ -596,8 +604,8 @@ client_infodiffusion_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_infodiffusion_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_infodiffusion_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -659,8 +667,8 @@ client_personlocation_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_personlocation_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_personlocation_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -692,8 +700,8 @@ client_personlocation_givecard.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                         dataindex++;
                         if(dataindex===data.length){
-                            handle.stat(deptId,'card');
-                            initstatistics.publishTopic();
+                            handle.stat(deptId,'card',[],initstatistics.publishTopic(deptId));
+
                         }
                 });
             }
@@ -726,8 +734,8 @@ client_personlocation_alarm.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex==data.length){
-                        handle.stat(deptId,'alarm',['location']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'alarm',['location'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -759,8 +767,8 @@ client_parking_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_parking_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_parking_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -792,8 +800,8 @@ client_parking_parkareainfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'othersum',['park']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'othersum',['park'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -855,8 +863,8 @@ client_parking_carrecord.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'parkio');
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'parkio',[],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -889,8 +897,8 @@ client_videointercom_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_videointercom_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_videointercom_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                     });
             }
@@ -980,8 +988,8 @@ client_patrol_deviceinfo.connect(function() {
 					postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'devicestatus',['p_patrol_deviceinfo']);
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'devicestatus',['p_patrol_deviceinfo'],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }
@@ -1013,8 +1021,8 @@ client_patrol_nightrecord.connect(function() {
         			postgre.excuteSql(insertJson.sql,insertJson.values,function(result) {
                     dataindex++;
                     if(dataindex===data.length){
-                        handle.stat(deptId,'patrolinfo');
-                        initstatistics.publishTopic();
+                        handle.stat(deptId,'patrolinfo',[],initstatistics.publishTopic(deptId));
+
                     }
                 });
             }

@@ -92,7 +92,7 @@ postgredb.getInsertDBSql=function(tablename,jsondate,jsonextend){
 
         if(haveId){
             Object.keys(jsondate).forEach(function(key,index){
-                if(keystr_name.indexOf(key.toLowerCase())<0){
+                if((','+keystr_name).indexOf(','+key.toLowerCase()+',')<0){
                     valueIndex += 1;
                     keystr_name += key.toLowerCase()+',';
                     keystr_value += '$'+ valueIndex + ',';
@@ -105,7 +105,7 @@ postgredb.getInsertDBSql=function(tablename,jsondate,jsonextend){
             if((typeof jsonextend)=='object' && Object.keys(jsonextend).length>0) {
 
                 Object.keys(jsonextend).forEach(function (key, index) {
-                    if(keystr_name.indexOf(key.toLowerCase())<0) {
+                    if((','+keystr_name).indexOf(','+key.toLowerCase()+',')<0) {
                         valueIndex += 1;
                         keystr_name += key.toLowerCase() + ',';
                         keystr_value += '$' + valueIndex + ',';

@@ -8,12 +8,13 @@ let cookieParser = require('cookie-parser');
 let bodyParser = require('body-parser');
 let seckeyPool = require("./utils/seckeyPool");
 let subscribe = require("./mq/subscribe");
-// let publish = require('./mq/publish');
+let publish = require('./mq/publish');
 let postgre = require("./utils/postgre");
 let redis = require("./utils/redis");
 let constUtils = require('./utils/constUtils');
 let log4js = require('./utils/logger');
 let initStatistics = require('./routes/base/initStatistics');
+let schedule = require('node-schedule');
 
 let app = express();
 
@@ -44,31 +45,33 @@ app.use(express.static(path.join(__dirname, 'public')));
 fs.existsSync(path.resolve(__dirname,'logs')) || fs.mkdirSync(path.resolve(__dirname,'logs'));
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
-let log=log4js.config(__dirname,jsName,logName);
+//初始化社区物联十系统信息入redis开始
 
-
-//初始化物联十系统信息入redis开始
-let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,cast(sid as integer)';
-postgre.excuteSql(systeminfoSql,[],function (result){
-    if(result.rowCount>0){
-        let systeminfoJson = [];
-        let communityId = '';
-        result.rows.forEach(function(data,index){
-            if(index===0){
-                communityId = data.communityid;
-            }
-            if(communityId != data.communityid){
-                redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
-                systeminfoJson = [];
-                communityId = data.communityid;
-            }
-            systeminfoJson.push(data);
-            if(index==result.rows.length-1)
-            redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
-        });
-    }
-});
+// //初始化社区物联十系统信息入redis开始
+// let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,cast(sid as integer)';
+// postgre.excuteSql(systeminfoSql,[],function (result){
+//     if(result.rowCount>0){
+//         let systeminfoJson = [];
+//         let communityId = '';
+//         result.rows.forEach(function(data,index){
+//             if(index===0){
+//                 communityId = data.communityid;
+//             }
+//             if(communityId != data.communityid){
+//                 redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
+//                 systeminfoJson = [];
+//                 communityId = data.communityid;
+//             }
+//             systeminfoJson.push(data);
+//             if(index==result.rows.length-1)
+//             redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
+//         });
+//     }
+// });
 //系统id对应系统设备信息表名
+
+
+
 let systemMapTableSql='select * from p_systemmaptable order by cast(sid as INTEGER)';
 postgre.excuteSql(systemMapTableSql,[],function (result){
     if(result.rowCount>0){
@@ -77,11 +80,19 @@ postgre.excuteSql(systemMapTableSql,[],function (result){
         });
     }
 });
-//初始化物联十系统信息入redis结束
-//初始化统计物联系统，按社区，大区，集团，海尔存放目前12块信息,开始
+
+let log=log4js.config(__dirname,jsName,logName);
 let initstatistics = new initStatistics();
+initstatistics.createSysteminfo();
+
+//初始化统计物联系统，按社区，大区，集团，海尔存放目前12块信息,开始
+initstatistics.createStatistics();
+//每天凌晨12点初始化一下
+schedule.scheduleJob('1 0 0 * * *',function(){
+    console.log('每日0点初始化开始~~~~');
     initstatistics.createStatistics();
-    initstatistics.publishTopic();
+});
+// initstatistics.publishTopic();
 
 //初始化统计结束
 //拦域所有URL并验证
@@ -237,10 +248,10 @@ app.use('/patrol', patrol_deviceinfo);
 let patrol_nightrecord = require('./routes/business/patrol_nightrecord');
 app.use('/patrol', patrol_nightrecord);
 
-//物联系统设备状态统计获取接口（前端从redis中拉取所需数据)
+//物联系统[设备状态]统计获取接口（前端从redis中拉取所需数据)
 let systemstatistic = require('./routes/business/systemstatistic');
 app.use('/devicestatus', systemstatistic);
-//物联系统概览设备状态统计获取接口（前端从redis中拉取所需数据)
+//物联系统[概览]设备状态统计获取接口（前端从redis中拉取所需数据)
 let devicestatus = require('./routes/business/devicestatus');
 app.use('/mainpage', devicestatus);
 

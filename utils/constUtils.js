@@ -212,10 +212,10 @@ constData.QUEUE_P_ALARM_DEVICEINFO = queue+constData.TABLE_P_ALARM_DEVICEINFO;
 /**
  * @name {物联系统统计主题}
  */
-//社区
-constData.TOPIC_STATISTICS_COMMUNITY = topic+"portal.sysstatistics.community";
 //大区
 constData.TOPIC_STATISTICS_REGION = topic+"portal.sysstatistics.region";
+//社区
+constData.TOPIC_STATISTICS_COMMUNITY = topic+"portal.sysstatistics.community";
 //集团
 constData.TOPIC_STATISTICS_GROUP = topic+"portal.sysstatistics.group";
 //海尔

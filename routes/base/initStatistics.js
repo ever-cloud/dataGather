@@ -2,7 +2,6 @@
 let publisher = require("../../mq/publish");
 let constUtils = require('../../utils/constUtils');
 let postgre = require("../../utils/postgre");
-let redis = require("../../utils/redis");
 /**
  * //初始化统计物联系统，按社区，大区，集团，海尔存放，放到内存和redis中
  */
@@ -40,10 +39,13 @@ function initStatistics(){
     this.stat.devicesta=this.devicesta;
     this.systemtypes=['','monitor','intercom','intrusion','info','gate','park','elevator','broadcast','patrol','location'];
     //统计信息存放在redis的hset中格式key:stat:(c/r/g/h:)deptid,field:统计code例如sum,bug或各系统简称monitor，value:统计内容比如：{"monitor":123,"elevator":123,"intercom":123,"location":123,"gate":123,"info":123,"intrusion":123,"park":123,"broadcast":123,"patrol":123}
-    this.createStatistics=()=>{
+    this.createStatistics=(communityid)=>{
         console.log('现在初始化部门id字典信息！根据字典初始化系统在线统计');
-        //整理部门id字典存放reids，以便后面统计调用（目前统计status为3即完成）
-        let deptidSql= 'select  c.id "communityid",r.id as "regionid",g.id as "groupid",\'1\' as "haierid" from t_community c,t_region r,t_group g where c.status=\'3\' and c.regionid=r.id and r.groupid=g.id  order by g.id,r.id,c.id';
+        //整理部门id字典存放reids，以便后面统计调用
+        let wherecondition='';
+        if(communityid !=undefined && communityid !='')
+            wherecondition=' and c.id =\''+communityid+'\' ';
+        let deptidSql= 'select  c.id "communityid",r.id as "regionid",g.id as "groupid",\'1\' as "haierid" from t_community c,t_region r,t_group g where  c.regionid=r.id and r.groupid=g.id '+wherecondition+' order by g.id,r.id,c.id';
         let thatstat=this.stat;
         let systemtypes=this.systemtypes;
         let middleObj={};
@@ -84,12 +86,12 @@ function initStatistics(){
                                 let communitySum = 0;
                                 if(systeminfo.status=='null' || systeminfo.status=='1'){
                                     communitySum=1;
-                                    middleObj['stat:c:'+data.communityid][systemtypes[systeminfo.sid]].online=communitySum;
+                                    middleObj['stat:c:'+data.communityid][systemtypes[systeminfo.sid]].online+=communitySum;
                                     redis.hset('stat:c:'+data.communityid,systemtypes[systeminfo.sid],JSON.stringify(middleObj['stat:c:'+data.communityid][systemtypes[systeminfo.sid]]));
                                     redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
-                                            middleObj['stat:r:' + deptid][systemtypes[systeminfo.sid]].online += communitySum;
-                                            redis.hset('stat:r:' + deptid, systemtypes[systeminfo.sid], JSON.stringify(middleObj['stat:r:' + deptid][systemtypes[systeminfo.sid]]));
-                                        });
+                                        middleObj['stat:r:' + deptid][systemtypes[systeminfo.sid]].online += communitySum;
+                                        redis.hset('stat:r:' + deptid, systemtypes[systeminfo.sid], JSON.stringify(middleObj['stat:r:' + deptid][systemtypes[systeminfo.sid]]));
+                                    });
                                     redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
                                         middleObj['stat:g:' + deptid][systemtypes[systeminfo.sid]].online += communitySum;
                                         redis.hset('stat:g:' + deptid, systemtypes[systeminfo.sid], JSON.stringify(middleObj['stat:g:' + deptid][systemtypes[systeminfo.sid]]));
@@ -107,7 +109,10 @@ function initStatistics(){
             console.log('现在初始化视频监控系统的统计信息！');
             //视频监控
             //设备数和故障数
-            let monitorSql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videomonitor_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
+            let wherecondition2='';
+            if(communityid !=undefined && communityid !='')
+                wherecondition2=' and t.communityid =\''+communityid+'\' ';
+            let monitorSql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videomonitor_deviceinfo t where t.status<>\'3\' '+wherecondition2+'group by t.communityid order by t.communityid';
             postgre.excuteSql(monitorSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -198,9 +203,9 @@ function initStatistics(){
             console.log('现在初始化电梯监控系统的统计信息！');
             //电梯监控
             //设备数和警报数和故障数
-            let elevatorbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_elevator_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
-            let elevatoralarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct communityid,deviceid from p_devicealarm t where t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1) o group by o.communityid order by o.communityid';
-            let elevatorrealalarmSql='select  communityid,count(*) as "elevatoralarm" from p_devicealarm t where t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid order by t.communityid';
+            let elevatorbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_elevator_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let elevatoralarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct communityid,deviceid from p_devicealarm t where t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+') o group by o.communityid order by o.communityid';
+            let elevatorrealalarmSql='select  t.communityid,count(*) as "elevatoralarm" from p_devicealarm t where t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(elevatorbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -276,7 +281,28 @@ function initStatistics(){
                     });
                 }
             });
-            postgre.excuteSql(elevatoralarmSql,[],function (result){// 电梯警报
+            result.rows.forEach(function(data){
+                //无数据清0
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+
+                    middleObj['stat:c:'+data.communityid].elevator.alarm=0;
+                    redis.hset('stat:c:'+data.communityid,'elevator',JSON.stringify(middleObj['stat:c:'+data.communityid].elevator));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].elevator.alarm = 0;
+                        redis.hset('stat:r:' + deptid, 'elevator', JSON.stringify(middleObj['stat:r:' + deptid].elevator));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].elevator.alarm = 0;
+                        redis.hset('stat:g:' + deptid, 'elevator', JSON.stringify(middleObj['stat:g:' + deptid].elevator));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].elevator.alarm = 0;
+                        redis.hset('stat:h:' + deptid, 'elevator', JSON.stringify(middleObj['stat:h:' + deptid].elevator));
+                    });
+                }
+            });
+            postgre.excuteSql(elevatoralarmSql,[],function (result){
+                // 电梯警报
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
                         let alarm=+data.alarm;
@@ -302,7 +328,27 @@ function initStatistics(){
                 }
             });
 
-            postgre.excuteSql(elevatorrealalarmSql,[],function (result){//实时报警
+            //无数据清0
+            result.rows.forEach(function(data){
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+                    middleObj['stat:c:'+data.communityid].alarm.elevator=0;
+                    redis.hset('stat:c:'+data.communityid,'alarm',JSON.stringify(middleObj['stat:c:'+data.communityid].alarm));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].alarm.elevator = 0;
+                        redis.hset('stat:r:' + deptid, 'alarm', JSON.stringify(middleObj['stat:r:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].alarm.elevator = 0;
+                        redis.hset('stat:g:' + deptid, 'alarm', JSON.stringify(middleObj['stat:g:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].alarm.elevator = 0;
+                        redis.hset('stat:h:' + deptid, 'alarm', JSON.stringify(middleObj['stat:h:' + deptid].alarm));
+                    });
+                }
+            });
+            postgre.excuteSql(elevatorrealalarmSql,[],function (result){
+                //实时报警
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
                         let elevatoralarm=+data.elevatoralarm;
@@ -330,9 +376,9 @@ function initStatistics(){
             console.log('现在初始化可视对讲系统的统计信息！');
             //可视对讲
             //设备数和警报数和故障数
-            let intercombugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videointercom_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
-            let intercomalarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct communityid,deviceid from p_devicealarm t where t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1) o group by o.communityid order by o.communityid';
-            let intercomrealalarmSql='select o.communityid,count(o.communityid) as "intercomalarm" from p_devicealarm o where o.sid=\'2\' and o."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by o.communityid order by o.communityid';
+            let intercombugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videointercom_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intercomalarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct communityid,deviceid from p_devicealarm t where t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+') o group by o.communityid order by o.communityid';
+            let intercomrealalarmSql='select t.communityid,count(t.communityid) as "intercomalarm" from p_devicealarm t where t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(intercombugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -408,6 +454,26 @@ function initStatistics(){
                     });
                 }
             });
+            result.rows.forEach(function(data){
+                //无数据清0
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+                    middleObj['stat:c:'+data.communityid].intercom.alarm=0;
+                    redis.hset('stat:c:'+data.communityid,'intercom',JSON.stringify(middleObj['stat:c:'+data.communityid].intercom));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].intercom.alarm = 0;
+                        redis.hset('stat:r:' + deptid, 'intercom', JSON.stringify(middleObj['stat:r:' + deptid].intercom));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].intercom.alarm = 0;
+                        redis.hset('stat:g:' + deptid, 'intercom', JSON.stringify(middleObj['stat:g:' + deptid].intercom));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].intercom.alarm = 0;
+                        redis.hset('stat:h:' + deptid, 'intercom', JSON.stringify(middleObj['stat:h:' + deptid].intercom));
+                    });
+                }
+
+            });
             postgre.excuteSql(intercomalarmSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -430,6 +496,26 @@ function initStatistics(){
                             });
                         }
 
+                    });
+                }
+            });
+
+            result.rows.forEach(function(data){
+                //无数据清0
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+                    middleObj['stat:c:'+data.communityid].alarm.intercom=0;
+                    redis.hset('stat:c:'+data.communityid,'alarm',JSON.stringify(middleObj['stat:c:'+data.communityid].alarm));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].alarm.intercom = 0;
+                        redis.hset('stat:r:' + deptid, 'alarm', JSON.stringify(middleObj['stat:r:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].alarm.intercom = 0;
+                        redis.hset('stat:g:' + deptid, 'alarm', JSON.stringify(middleObj['stat:g:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].alarm.intercom = 0;
+                        redis.hset('stat:h:' + deptid, 'alarm', JSON.stringify(middleObj['stat:h:' + deptid].alarm));
                     });
                 }
             });
@@ -461,10 +547,10 @@ function initStatistics(){
             console.log('现在初始化人员定位系统的统计信息！');
             //人员定位
             //设备数和警报数和故障数和发卡数
-            let locationbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_personlocation_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
-            let locationalarmSql='select p.communityid,count(p.communityid) as "alarm" from p_personlocation_alarm p where p.alarmtype=\'1\'   group by p.communityid order by p.communityid';
-            let locationrealalarmSql='select p.communityid,count(p.communityid) as "locationalarm" from p_personlocation_alarm p where p.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1  group by p.communityid order by p.communityid';
-            let locationcardSql='select p.communityid,count(p.communityid) as "card" from p_personlocation_givecard p  group by p.communityid order by p.communityid';
+            let locationbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_personlocation_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let locationalarmSql='select t.communityid,count(t.communityid) as "alarm" from p_personlocation_alarm t where t.alarmtype=\'1\' '+wherecondition2+'  group by t.communityid order by t.communityid';
+            let locationrealalarmSql='select t.communityid,count(t.communityid) as "locationalarm" from p_personlocation_alarm t where t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1  '+wherecondition2+' group by t.communityid order by t.communityid';
+            let locationcardSql='select t.communityid,count(t.communityid) as "card" from p_personlocation_givecard t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
 
             postgre.excuteSql(locationbugSql,[],function (result){
                 if(result.rowCount>0){
@@ -566,7 +652,25 @@ function initStatistics(){
                     });
                 }
             });
-
+            //无数据清0
+            result.rows.forEach(function(data){
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+                    middleObj['stat:c:'+data.communityid].alarm.location=0;
+                    redis.hset('stat:c:'+data.communityid,'alarm',JSON.stringify(middleObj['stat:c:'+data.communityid].alarm));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].alarm.location = 0;
+                        redis.hset('stat:r:' + deptid, 'alarm', JSON.stringify(middleObj['stat:r:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].alarm.location = 0;
+                        redis.hset('stat:g:' + deptid, 'alarm', JSON.stringify(middleObj['stat:g:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].alarm.location = 0;
+                        redis.hset('stat:h:' + deptid, 'alarm', JSON.stringify(middleObj['stat:h:' + deptid].alarm));
+                    });
+                }
+            });
             postgre.excuteSql(locationrealalarmSql,[],function (result){//实时报警
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -621,8 +725,8 @@ function initStatistics(){
             console.log('现在初始化gate系统的统计信息！');
             //gate
             //设备数和警报数和故障数
-            let gatebugSql='select t.communityid,count(id) as "sum",SUM(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_gate_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
-            let gatealarmSql='select t.communityid,count(t.communityid) as "alarm" from p_devicealarm t where t.sid=\'5\'  group by t.communityid order by t.communityid';
+            let gatebugSql='select t.communityid,count(id) as "sum",SUM(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_gate_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let gatealarmSql='select t.communityid,count(t.communityid) as "alarm" from p_devicealarm t where t.sid=\'5\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(gatebugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -632,7 +736,7 @@ function initStatistics(){
                         if(middleObj['stat:c:'+data.communityid]!=undefined){
 
                             middleObj['stat:c:'+data.communityid].gate.sum=sum;
-                            middleObj['stat:c:'+data.communityid].gate.bug=bug;
+                            // middleObj['stat:c:'+data.communityid].gate.bug=bug;
                             //合计及bug
                             middleObj['stat:c:'+data.communityid].sum.gate+=sum;
                             middleObj['stat:c:'+data.communityid].bug.gate+=bug;
@@ -646,7 +750,7 @@ function initStatistics(){
                             middleObj['stat:c:'+data.communityid].devicesta.nobug+=sum-bug;
                             redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
                                 middleObj['stat:r:' + deptid].gate.sum += sum;
-                                middleObj['stat:r:' + deptid].gate.bug += bug;
+                                // middleObj['stat:r:' + deptid].gate.bug += bug;
                                 redis.hset('stat:r:' + deptid, 'gate', JSON.stringify(middleObj['stat:r:' + deptid].gate));
                                 //合计及bug
                                 middleObj['stat:r:'+deptid].sum.gate+=sum;
@@ -662,7 +766,7 @@ function initStatistics(){
                             });
                             redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
                                 middleObj['stat:g:' + deptid].gate.sum += sum;
-                                middleObj['stat:g:' + deptid].gate.bug += bug;
+                                // middleObj['stat:g:' + deptid].gate.bug += bug;
                                 redis.hset('stat:g:' + deptid, 'gate', JSON.stringify(middleObj['stat:g:' + deptid].gate));
                                 //合计及bug
                                 middleObj['stat:g:'+deptid].sum.gate+=sum;
@@ -678,7 +782,7 @@ function initStatistics(){
                             });
                             redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
                                 middleObj['stat:h:' + deptid].gate.sum += sum;
-                                middleObj['stat:h:' + deptid].gate.bug += bug;
+                                // middleObj['stat:h:' + deptid].gate.bug += bug;
                                 redis.hset('stat:h:' + deptid, 'gate', JSON.stringify(middleObj['stat:h:' + deptid].gate));
                                 //合计及bug
                                 middleObj['stat:h:'+deptid].sum.gate+=sum;
@@ -727,7 +831,7 @@ function initStatistics(){
             console.log('现在初始化信息发布系统的统计信息！');
             //信息发布
             //设备数和故障数
-            let infobugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_infodiffusion_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
+            let infobugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_infodiffusion_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(infobugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -807,10 +911,10 @@ function initStatistics(){
             console.log('现在初始化入侵警报系统的统计信息！');
             //入侵警报
             //防区数和警报数
-            let intrusionsectionSql='select t.communityid,count(sectorid) as "sum" from p_alarm_sectorinfo t group by t.communityid order by t.communityid';
-            let intrusionalarmSql='select o.communityid,count(o.communityid) as "alarm" from p_alarm_intrusion  o group by o.communityid order by o.communityid';
-            let intrusionrealalarmSql='select o.communityid,count(o.communityid) as "intrusionalarm" from p_alarm_intrusion  o where o.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by o.communityid order by o.communityid';
-            let intrusionbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_alarm_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
+            let intrusionsectionSql='select t.communityid,count(sectorid) as "sum" from p_alarm_sectorinfo t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionalarmSql='select t.communityid,count(t.communityid) as "alarm" from p_alarm_intrusion  t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionrealalarmSql='select t.communityid,count(t.communityid) as "intrusionalarm" from p_alarm_intrusion  t where t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_alarm_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(intrusionbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -924,6 +1028,25 @@ function initStatistics(){
                 }
             });
 
+            result.rows.forEach(function(data){
+                //无数据清0
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+                    middleObj['stat:c:'+data.communityid].alarm.intrusion=0;
+                    redis.hset('stat:c:'+data.communityid,'alarm',JSON.stringify(middleObj['stat:c:'+data.communityid].alarm));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].alarm.intrusion = 0;
+                        redis.hset('stat:r:' + deptid, 'alarm', JSON.stringify(middleObj['stat:r:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].alarm.intrusion = 0;
+                        redis.hset('stat:g:' + deptid, 'alarm', JSON.stringify(middleObj['stat:g:' + deptid].alarm));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].alarm.intrusion = 0;
+                        redis.hset('stat:h:' + deptid, 'alarm', JSON.stringify(middleObj['stat:h:' + deptid].alarm));
+                    });
+                }
+            });
             postgre.excuteSql(intrusionrealalarmSql,[],function (result){//实时报警
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -953,9 +1076,10 @@ function initStatistics(){
             console.log('现在初始化车辆管理系统的统计信息！');
             //车辆管理
             //车位数和入库数和出库数
-            let parkportSql='select t.communityid,sum(total) as "sum" from p_parking_parkareainfo t group by t.communityid order by t.communityid';
-            let parkinSql='select o.communityid,sum(case when o.status=\'enter\'  then 1 else 0 end) as "in",sum(case when o.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  o group by o.communityid order by o.communityid';
-            let parkbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_parking_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
+            let parkportSql='select  t.communityid,total as "sum" from p_parking_parkareainfo t ,(select communityid,max(optdate) optdate  from p_parking_parkareainfo  group by communityid)m where t.communityid=m.communityid and t.optdate=m.optdate '+wherecondition2;
+            //let parkportSql='select t.communityid,total as "sum" from p_parking_parkareainfo t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let parkinSql='select t.communityid,sum(case when t.status=\'enter\'  then 1 else 0 end) as "in",sum(case when t.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  t where t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let parkbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_parking_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(parkbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1045,6 +1169,31 @@ function initStatistics(){
                     });
                 }
             });
+
+            result.rows.forEach(function(data){
+                //无数据清0
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+
+                middleObj['stat:c:'+data.communityid].park.in=0;
+                middleObj['stat:c:'+data.communityid].park.out=0;
+                redis.hset('stat:c:'+data.communityid,'park',JSON.stringify(middleObj['stat:c:'+data.communityid].park));
+                redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                    middleObj['stat:r:' + deptid].park.in = 0;
+                    middleObj['stat:r:' + deptid].park.out = 0;
+                    redis.hset('stat:r:' + deptid, 'park', JSON.stringify(middleObj['stat:r:' + deptid].park));
+                });
+                redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                    middleObj['stat:g:' + deptid].park.in = 0;
+                    middleObj['stat:g:' + deptid].park.out = 0;
+                    redis.hset('stat:g:' + deptid, 'park', JSON.stringify(middleObj['stat:g:' + deptid].park));
+                });
+                redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                    middleObj['stat:h:' + deptid].park.in = 0;
+                    middleObj['stat:h:' + deptid].park.out = 0;
+                    redis.hset('stat:h:' + deptid, 'park', JSON.stringify(middleObj['stat:h:' + deptid].park));
+                });
+                }
+            });
             postgre.excuteSql(parkinSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1078,9 +1227,9 @@ function initStatistics(){
             console.log('现在初始化广播通讯系统的统计信息！');
             //广播通讯
             //在线分区和广播分区和广播状态
-            let broadcastbroadSql='select t.communityid,count(id) as "onlinesum" from p_broadcast_record t where t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid order by t.communityid';
-            let broadcastsectionSql='select o.communityid,sum(case when o.status=\'1\'  then 1 else 0 end) as "onlinearea",count(id) as "areasum" from p_broadcast_area as o group by o.communityid order by o.communityid';
-            let broadcastbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_broadcast_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
+            let broadcastbroadSql='select t.communityid,count(id) as "onlinesum" from p_broadcast_record t where t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let broadcastsectionSql='select t.communityid,sum(case when t.status=\'1\'  then 1 else 0 end) as "onlinearea",count(id) as "areasum" from p_broadcast_area as t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let broadcastbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_broadcast_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(broadcastbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1102,46 +1251,46 @@ function initStatistics(){
                             middleObj['stat:c:'+data.communityid].devicesta.nobug+=sum-bug;
                             redis.hset('stat:c:'+data.communityid,'devicesta',JSON.stringify(middleObj['stat:c:'+data.communityid].devicesta));
                             redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
-                            redis.hset('stat:r:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:r:' + deptid].broadcast));
-                            //合计及bug
-                            middleObj['stat:r:'+deptid].sum.broadcast+=sum;
-                            middleObj['stat:r:'+deptid].bug.broadcast+=bug;
-                            redis.hset('stat:r:' + deptid, 'sum', JSON.stringify(middleObj['stat:r:' + deptid].sum));
-                            redis.hset('stat:r:' + deptid, 'bug', JSON.stringify(middleObj['stat:r:' + deptid].bug));
-                            //设备状态
-                            middleObj['stat:r:' + deptid].devicesta.online+=sum-offline;
-                            middleObj['stat:r:' + deptid].devicesta.offline+=offline;
-                            middleObj['stat:r:' + deptid].devicesta.bug+=bug;
-                            middleObj['stat:r:' + deptid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:r:' + deptid,'devicesta',JSON.stringify(middleObj['stat:r:' + deptid].devicesta));
+                                redis.hset('stat:r:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:r:' + deptid].broadcast));
+                                //合计及bug
+                                middleObj['stat:r:'+deptid].sum.broadcast+=sum;
+                                middleObj['stat:r:'+deptid].bug.broadcast+=bug;
+                                redis.hset('stat:r:' + deptid, 'sum', JSON.stringify(middleObj['stat:r:' + deptid].sum));
+                                redis.hset('stat:r:' + deptid, 'bug', JSON.stringify(middleObj['stat:r:' + deptid].bug));
+                                //设备状态
+                                middleObj['stat:r:' + deptid].devicesta.online+=sum-offline;
+                                middleObj['stat:r:' + deptid].devicesta.offline+=offline;
+                                middleObj['stat:r:' + deptid].devicesta.bug+=bug;
+                                middleObj['stat:r:' + deptid].devicesta.nobug+=sum-bug;
+                                redis.hset('stat:r:' + deptid,'devicesta',JSON.stringify(middleObj['stat:r:' + deptid].devicesta));
                             });
                             redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
-                            redis.hset('stat:g:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:g:' + deptid].broadcast));
-                            //合计及bug
-                            middleObj['stat:g:'+deptid].sum.broadcast+=sum;
-                            middleObj['stat:g:'+deptid].bug.broadcast+=bug;
-                            redis.hset('stat:g:' + deptid, 'sum', JSON.stringify(middleObj['stat:g:' + deptid].sum));
-                            redis.hset('stat:g:' + deptid, 'bug', JSON.stringify(middleObj['stat:g:' + deptid].bug));
-                            //设备状态
-                            middleObj['stat:g:' + deptid].devicesta.online+=sum-offline;
-                            middleObj['stat:g:' + deptid].devicesta.offline+=offline;
-                            middleObj['stat:g:' + deptid].devicesta.bug+=bug;
-                            middleObj['stat:g:' + deptid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:g:' + deptid,'devicesta',JSON.stringify(middleObj['stat:g:' + deptid].devicesta));
+                                redis.hset('stat:g:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:g:' + deptid].broadcast));
+                                //合计及bug
+                                middleObj['stat:g:'+deptid].sum.broadcast+=sum;
+                                middleObj['stat:g:'+deptid].bug.broadcast+=bug;
+                                redis.hset('stat:g:' + deptid, 'sum', JSON.stringify(middleObj['stat:g:' + deptid].sum));
+                                redis.hset('stat:g:' + deptid, 'bug', JSON.stringify(middleObj['stat:g:' + deptid].bug));
+                                //设备状态
+                                middleObj['stat:g:' + deptid].devicesta.online+=sum-offline;
+                                middleObj['stat:g:' + deptid].devicesta.offline+=offline;
+                                middleObj['stat:g:' + deptid].devicesta.bug+=bug;
+                                middleObj['stat:g:' + deptid].devicesta.nobug+=sum-bug;
+                                redis.hset('stat:g:' + deptid,'devicesta',JSON.stringify(middleObj['stat:g:' + deptid].devicesta));
                             });
                             redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
-                            redis.hset('stat:h:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:h:' + deptid].broadcast));
-                            //合计及bug
-                            middleObj['stat:h:'+deptid].sum.broadcast+=sum;
-                            middleObj['stat:h:'+deptid].bug.broadcast+=bug;
-                            redis.hset('stat:h:' + deptid, 'sum', JSON.stringify(middleObj['stat:h:' + deptid].sum));
-                            redis.hset('stat:h:' + deptid, 'bug', JSON.stringify(middleObj['stat:h:' + deptid].bug));
-                            //设备状态
-                            middleObj['stat:h:' + deptid].devicesta.online+=sum-offline;
-                            middleObj['stat:h:' + deptid].devicesta.offline+=offline;
-                            middleObj['stat:h:' + deptid].devicesta.bug+=bug;
-                            middleObj['stat:h:' + deptid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:h:' + deptid,'devicesta',JSON.stringify(middleObj['stat:h:' + deptid].devicesta));
+                                redis.hset('stat:h:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:h:' + deptid].broadcast));
+                                //合计及bug
+                                middleObj['stat:h:'+deptid].sum.broadcast+=sum;
+                                middleObj['stat:h:'+deptid].bug.broadcast+=bug;
+                                redis.hset('stat:h:' + deptid, 'sum', JSON.stringify(middleObj['stat:h:' + deptid].sum));
+                                redis.hset('stat:h:' + deptid, 'bug', JSON.stringify(middleObj['stat:h:' + deptid].bug));
+                                //设备状态
+                                middleObj['stat:h:' + deptid].devicesta.online+=sum-offline;
+                                middleObj['stat:h:' + deptid].devicesta.offline+=offline;
+                                middleObj['stat:h:' + deptid].devicesta.bug+=bug;
+                                middleObj['stat:h:' + deptid].devicesta.nobug+=sum-bug;
+                                redis.hset('stat:h:' + deptid,'devicesta',JSON.stringify(middleObj['stat:h:' + deptid].devicesta));
                             });
                         }
 
@@ -1177,7 +1326,25 @@ function initStatistics(){
                     });
                 }
             });
-
+            result.rows.forEach(function(data){
+                //无数据清0
+                if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
+                    middleObj['stat:c:'+data.communityid].broadcast.onlinesum=0;
+                    redis.hset('stat:c:'+data.communityid,'broadcast',JSON.stringify(middleObj['stat:c:'+data.communityid].broadcast));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].broadcast.onlinesum = 0;
+                        redis.hset('stat:r:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:r:' + deptid].broadcast));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].broadcast.onlinesum = 0;
+                        redis.hset('stat:g:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:g:' + deptid].broadcast));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].broadcast.onlinesum = 0;
+                        redis.hset('stat:h:' + deptid, 'broadcast', JSON.stringify(middleObj['stat:h:' + deptid].broadcast));
+                    });
+                }
+            });
             postgre.excuteSql(broadcastbroadSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1206,8 +1373,8 @@ function initStatistics(){
             console.log('现在初始化电子巡更系统的统计信息！');
             //电子巡更
             //终端总数和已巡更次数和未巡更次数
-            let patrolsumSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_patrol_deviceinfo t where t.status<>\'3\' group by t.communityid order by t.communityid';
-            let patrolrecordSql='select o.communityid,sum(case when o.result=\'0\'  then 1 else 0 end) as "not",sum(case when (o.result=\'1\' or o.result=\'2\'   ) then 1 else 0 end) as "yet" from p_patrol_nightrecord as o group by o.communityid order by o.communityid';
+            let patrolsumSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_patrol_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let patrolrecordSql='select t.communityid,sum(case when t.result=\'0\'  then 1 else 0 end) as "not",sum(case when (t.result=\'1\' or t.result=\'2\'   ) then 1 else 0 end) as "yet" from p_patrol_nightrecord as t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(patrolsumSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1230,49 +1397,49 @@ function initStatistics(){
                             middleObj['stat:c:'+data.communityid].devicesta.nobug+=sum-bug;
                             redis.hset('stat:c:'+data.communityid,'devicesta',JSON.stringify(middleObj['stat:c:'+data.communityid].devicesta));
                             redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
-                            middleObj['stat:r:' + deptid].patrol.sum += sum;
-                            redis.hset('stat:r:' + deptid, 'patrol', JSON.stringify(middleObj['stat:r:' + deptid].patrol));
-                            //合计及bug
-                            middleObj['stat:r:'+deptid].sum.patrol+=sum;
-                            middleObj['stat:r:'+deptid].bug.patrol+=bug;
-                            redis.hset('stat:r:' + deptid, 'sum', JSON.stringify(middleObj['stat:r:' + deptid].sum));
-                            redis.hset('stat:r:' + deptid, 'bug', JSON.stringify(middleObj['stat:r:' + deptid].bug));
-                            //设备状态
-                            middleObj['stat:r:' + deptid].devicesta.online+=sum-offline;
-                            middleObj['stat:r:' + deptid].devicesta.offline+=offline;
-                            middleObj['stat:r:' + deptid].devicesta.bug+=bug;
-                            middleObj['stat:r:' + deptid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:r:' + deptid,'devicesta',JSON.stringify(middleObj['stat:r:' + deptid].devicesta));
+                                middleObj['stat:r:' + deptid].patrol.sum += sum;
+                                redis.hset('stat:r:' + deptid, 'patrol', JSON.stringify(middleObj['stat:r:' + deptid].patrol));
+                                //合计及bug
+                                middleObj['stat:r:'+deptid].sum.patrol+=sum;
+                                middleObj['stat:r:'+deptid].bug.patrol+=bug;
+                                redis.hset('stat:r:' + deptid, 'sum', JSON.stringify(middleObj['stat:r:' + deptid].sum));
+                                redis.hset('stat:r:' + deptid, 'bug', JSON.stringify(middleObj['stat:r:' + deptid].bug));
+                                //设备状态
+                                middleObj['stat:r:' + deptid].devicesta.online+=sum-offline;
+                                middleObj['stat:r:' + deptid].devicesta.offline+=offline;
+                                middleObj['stat:r:' + deptid].devicesta.bug+=bug;
+                                middleObj['stat:r:' + deptid].devicesta.nobug+=sum-bug;
+                                redis.hset('stat:r:' + deptid,'devicesta',JSON.stringify(middleObj['stat:r:' + deptid].devicesta));
                             });
                             redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
-                            middleObj['stat:g:' + deptid].patrol.sum += sum;
-                            redis.hset('stat:g:' + deptid, 'patrol', JSON.stringify(middleObj['stat:g:' + deptid].patrol));
-                            //合计及bug
-                            middleObj['stat:g:'+deptid].sum.patrol+=sum;
-                            middleObj['stat:g:'+deptid].bug.patrol+=bug;
-                            redis.hset('stat:g:' + deptid, 'sum', JSON.stringify(middleObj['stat:g:' + deptid].sum));
-                            redis.hset('stat:g:' + deptid, 'bug', JSON.stringify(middleObj['stat:g:' + deptid].bug));
-                            //设备状态
-                            middleObj['stat:g:' + deptid].devicesta.online+=sum-offline;
-                            middleObj['stat:g:' + deptid].devicesta.offline+=offline;
-                            middleObj['stat:g:' + deptid].devicesta.bug+=bug;
-                            middleObj['stat:g:' + deptid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:g:' + deptid,'devicesta',JSON.stringify(middleObj['stat:g:' + deptid].devicesta));
+                                middleObj['stat:g:' + deptid].patrol.sum += sum;
+                                redis.hset('stat:g:' + deptid, 'patrol', JSON.stringify(middleObj['stat:g:' + deptid].patrol));
+                                //合计及bug
+                                middleObj['stat:g:'+deptid].sum.patrol+=sum;
+                                middleObj['stat:g:'+deptid].bug.patrol+=bug;
+                                redis.hset('stat:g:' + deptid, 'sum', JSON.stringify(middleObj['stat:g:' + deptid].sum));
+                                redis.hset('stat:g:' + deptid, 'bug', JSON.stringify(middleObj['stat:g:' + deptid].bug));
+                                //设备状态
+                                middleObj['stat:g:' + deptid].devicesta.online+=sum-offline;
+                                middleObj['stat:g:' + deptid].devicesta.offline+=offline;
+                                middleObj['stat:g:' + deptid].devicesta.bug+=bug;
+                                middleObj['stat:g:' + deptid].devicesta.nobug+=sum-bug;
+                                redis.hset('stat:g:' + deptid,'devicesta',JSON.stringify(middleObj['stat:g:' + deptid].devicesta));
                             });
                             redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
-                            middleObj['stat:h:' + deptid].patrol.sum += sum;
-                            redis.hset('stat:h:' + deptid, 'patrol', JSON.stringify(middleObj['stat:h:' + deptid].patrol));
-                            //合计及bug
-                            middleObj['stat:h:'+deptid].sum.patrol+=sum;
-                            middleObj['stat:h:'+deptid].bug.patrol+=bug;
-                            redis.hset('stat:h:' + deptid, 'sum', JSON.stringify(middleObj['stat:h:' + deptid].sum));
-                            redis.hset('stat:h:' + deptid, 'bug', JSON.stringify(middleObj['stat:h:' + deptid].bug));
-                            //设备状态
-                            middleObj['stat:h:' + deptid].devicesta.online+=sum-offline;
-                            middleObj['stat:h:' + deptid].devicesta.offline+=offline;
-                            middleObj['stat:h:' + deptid].devicesta.bug+=bug;
-                            middleObj['stat:h:' + deptid].devicesta.nobug+=sum-bug;
-                            redis.hset('stat:h:' + deptid,'devicesta',JSON.stringify(middleObj['stat:h:' + deptid].devicesta));
+                                middleObj['stat:h:' + deptid].patrol.sum += sum;
+                                redis.hset('stat:h:' + deptid, 'patrol', JSON.stringify(middleObj['stat:h:' + deptid].patrol));
+                                //合计及bug
+                                middleObj['stat:h:'+deptid].sum.patrol+=sum;
+                                middleObj['stat:h:'+deptid].bug.patrol+=bug;
+                                redis.hset('stat:h:' + deptid, 'sum', JSON.stringify(middleObj['stat:h:' + deptid].sum));
+                                redis.hset('stat:h:' + deptid, 'bug', JSON.stringify(middleObj['stat:h:' + deptid].bug));
+                                //设备状态
+                                middleObj['stat:h:' + deptid].devicesta.online+=sum-offline;
+                                middleObj['stat:h:' + deptid].devicesta.offline+=offline;
+                                middleObj['stat:h:' + deptid].devicesta.bug+=bug;
+                                middleObj['stat:h:' + deptid].devicesta.nobug+=sum-bug;
+                                redis.hset('stat:h:' + deptid,'devicesta',JSON.stringify(middleObj['stat:h:' + deptid].devicesta));
                             });
                         }
                     });
@@ -1313,46 +1480,64 @@ function initStatistics(){
     };
 
     //初始化发布主题，按照社区，大区，集团，haier分别发布
-    this.publishTopic=()=>{
-        let publishRole=['stat:c:*','stat:r:*','stat:g:*','stat:h:*'];
+    this.publishTopic=(communityid)=>{
+        // let publishRole=['stat:c:*','stat:r:*','stat:g:*','stat:h:*'];
+        let publishRole=['communityid','regionid','groupid','haierid'];
         let publishPath=[constUtils.TOPIC_STATISTICS_COMMUNITY,constUtils.TOPIC_STATISTICS_REGION,constUtils.TOPIC_STATISTICS_GROUP,constUtils.TOPIC_STATISTICS_SUPER];
         let desc_contents=[];
+        let descContent={};
         let j=0;
-        publishRole.forEach(function(keyrole,index){
-            let communityStatInfo=[];
-
-            redis.keys(keyrole,function(keys){
-                keys.forEach(function(key,keyindex){
-                    redis.hgetall(key,(data)=>{
-                        let statinfo={};
-                        let datainfo={};
-                        statinfo.id=key.substring(7);
-                        Object.keys(data).forEach((key)=>{
-                            if(key != 'devicesta'){
-                                datainfo[key]=JSON.parse(data[key]);
-                            }
-                        });
-                        statinfo.data=datainfo;
-                        communityStatInfo.push(statinfo);
-                        if(communityStatInfo.length==keys.length && keyindex==keys.length-1){
-                            let descContent={};
-                            descContent['destination']=publishPath[index];
-                            descContent['content']=JSON.stringify(communityStatInfo);
-                            desc_contents.push(descContent);
-                            j++;
-                            if(j==publishRole.length){
-                                publisher.mutlipublish(desc_contents);
-                            }
-                        }
-                    });
-
+        descContent['destination']=publishPath[0];
+        descContent['content']=communityid;
+        desc_contents.push(descContent);
+        publishPath.forEach((destination,index)=>{
+            if(index>0){
+                let descContent={};
+                redis.hget('deptdict:'+communityid,publishRole[index],(deptid)=>{
+                    descContent['destination']=destination;
+                    descContent['content']=deptid;
+                    desc_contents.push(descContent);
+                    if(index==publishPath.length-1){
+                        publisher.mutlipublish(desc_contents);
+                    }
                 });
-
-            });
+            }
 
         });
 
     };
+    //添加社区系统信息到redis
+    this.createSysteminfo=(communityid,cb)=>{
+        //初始化社区物联十系统信息入redis开始
+        console.log('初始化社区物联十系统信息入redis开始'+communityid+'----------------------');
+        let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,cast(sid as integer)';
+        if(communityid !=undefined && communityid !='')
+            systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s where communityid=\''+communityid+'\'  order by communityid,cast(sid as integer)';
+        postgre.excuteSql(systeminfoSql,[],function (result){
+            if(result.rowCount>0){
+                let systeminfoJson = [];
+                let communityId = '';
+                result.rows.forEach(function(data,index){
+                    if(index===0){
+                        communityId = data.communityid;
+                    }
+                    if(communityId != data.communityid){
+                        redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
+                        systeminfoJson = [];
+                        communityId = data.communityid;
+                    }
+                    systeminfoJson.push(data);
+                    if(index==result.rows.length-1)
+                        redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
+                    cb;
+                });
+            }else{
+                redis.hdel(constUtils.TABLE_P_SYSTEMINFO,communityid);
+                cb;
+            }
+        });
+    };
 }
+let redis = require("../../utils/redis");
 
 module.exports = initStatistics;

@@ -30,13 +30,14 @@ router.use('/', function(req, res, next) {
     postgre.excuteSql(sql,[userId],function(result) {
         if(result.rowCount>0){
             if(password === result.rows[0].password){
+                let communityId=result.rows[0].communityId;
                 seckeyPool.add(userId,JSON.stringify(result.rows[0]),function (result) {
                     if(isInterfaceManager){
-                        log.info('{"code":1001,"seckey":"'+result+'","msg":"物联接口用户登录成功！","userId":'+userId+'}');
-                        res.send('{"code":1001,"seckey":"'+result+'","msg":"物联接口用户登录成功！"}');
+                        log.info('{"code":1000,"seckey":"'+result+'","communityId":"'+communityId+'"msg":"物联接口用户登录成功！","userId":'+userId+'}');
+                        res.send('{"code":1000,"seckey":"'+result+'","communityId":"'+communityId+'","msg":"物联接口用户登录成功！"}');
                     }else{
-                        log.info('{"code":1001,"seckey":"'+result+'","msg":"管理员登录成功！","userId":'+userId+'}');
-                        res.send('{"code":1001,"seckey":"'+result+'","msg":"管理员登录成功！"}');
+                        log.info('{"code":1000,"seckey":"'+result+'","communityId":"'+communityId+'","msg":"管理员登录成功！","userId":'+userId+'}');
+                        res.send('{"code":1000,"seckey":"'+result+'","communityId":"'+communityId+'","msg":"管理员登录成功！"}');
                     }
 
                 });

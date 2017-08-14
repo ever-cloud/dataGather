@@ -26,7 +26,7 @@ router.use('/erroralarmcode', function(req, res, next) {
             json['optDate'] = moment().format('YYYY-MM-DD');
             publisher.publish(destination, JSON.stringify(json));
             log.info(loginuser, json);
-            res.send('{"code":' + constUtils.WORK_UPLOAD_SUCCESS + ',"msg":"[设备故障码/报警码信息]数据上传ActiveMq成功！"} 上传时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
+                res.send('{"code":' + constUtils.WORK_UPLOAD_SUCCESS + ',"msg":"[设备故障码/报警码信息]数据上传ActiveMq成功！"} 上传时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
             }else{
                 res.send('{"code":' + constUtils.WORK_QUERY_FAIL + ',"msg":"[设备故障码/报警码信息]无效seckey，操作不成功！"} 时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
             }

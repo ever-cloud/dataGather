@@ -5,7 +5,7 @@ let publisher = require("../../mq/publish");
 let constUtils = require('../../utils/constUtils');
 let moment = require('moment');
 let log4js = require('../../utils/logger');
-let destination = constUtils.QUEUE_P_BROADCAST_DEVICEINFO;
+let destination = constUtils.QUEUE_P_PARKING_DEVICEINFO;
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
 /* GET users listing.

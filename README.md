@@ -9,5 +9,6 @@
 * npm install  --save stomp-client 安装ActiveMq客户端依赖模块
 * npm install  --save moment 安装时间格式化依赖模块
 * npm install  --save log4js 安装日志记录依赖模块
+* npm install  --save node-schedule 安装定时器依赖模块
 ------------------------------------
 ### 欢迎使用，愿系统运行顺利
