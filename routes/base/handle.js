@@ -22,16 +22,6 @@ let _sysinfo=function(communityids){
                 });
             });
         }else if(typeof communityids=='string'){
-            // postgre.excuteSql(systeminfoSql,[communityids],function (result){
-            //     if(result.rowCount>0){
-            //         let systeminfoJson = [];
-            //         result.rows.forEach(function(data,index){
-            //             systeminfoJson.push(data);
-            //             if(index==result.rows.length-1)
-            //                 redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityids,JSON.stringify(systeminfoJson));
-            //         });
-            //     }
-            // });
             let communityary=[];
             communityary.push(communityids);
             _sysinfo(communityary);
@@ -56,6 +46,7 @@ let _stat=function(communityid,types,typearrays,cb){
                             redis.hgetall('stat:c:'+communityid,(communitystats)=>{
                                 Object.keys(communitystats).forEach(function (field,index) {
                                     let oldstatinfo=JSON.parse(communitystats[field]);
+                                    if(oldstatinfo['online']!=undefined && parseInt(oldstatinfo['online'])!=0)oldstatinfo['online']=0;
                                     result.rows.forEach(function(data){
                                         if(systemtypes[data.sid]==field){
                                         let newonlie=0;
@@ -63,7 +54,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                             calinfo[field]=newonlie-oldstatinfo.online;
                                             oldstatinfo['online']=newonlie;
                                             redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatinfo));
-                                            cb;
+                                            if(index==Object.keys(communitystats).length-1){
+                                                cb;
+                                            }
                                             redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
                                                 redis.hget('stat:r:'+deptid,field,(regionstats)=>{
                                                         let oldstatinfo=JSON.parse(regionstats);
@@ -74,7 +67,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                             });
 
                                             redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
-                                                redis.hget('stat:g:'+deptid,(groupstats)=>{
+                                                redis.hget('stat:g:'+deptid,field,(groupstats)=>{
                                                         let oldstatinfo=JSON.parse(groupstats);
                                                         oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
                                                         redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo));
@@ -82,7 +75,7 @@ let _stat=function(communityid,types,typearrays,cb){
 
                                             });
                                             redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
-                                                redis.hget('stat:h:'+deptid,(haierstats)=>{
+                                                redis.hget('stat:h:'+deptid,field,(haierstats)=>{
                                                         let oldstatinfo=JSON.parse(haierstats);
                                                         oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
                                                         redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo));

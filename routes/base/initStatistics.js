@@ -1480,7 +1480,7 @@ function initStatistics(){
     };
 
     //初始化发布主题，按照社区，大区，集团，haier分别发布
-    this.publishTopic=(communityid)=>{
+    this.publishTopic=(communityid,cb)=>{
         // let publishRole=['stat:c:*','stat:r:*','stat:g:*','stat:h:*'];
         let publishRole=['communityid','regionid','groupid','haierid'];
         let publishPath=[constUtils.TOPIC_STATISTICS_COMMUNITY,constUtils.TOPIC_STATISTICS_REGION,constUtils.TOPIC_STATISTICS_GROUP,constUtils.TOPIC_STATISTICS_SUPER];
@@ -1499,6 +1499,7 @@ function initStatistics(){
                     desc_contents.push(descContent);
                     if(index==publishPath.length-1){
                         publisher.mutlipublish(desc_contents);
+                        cb;
                     }
                 });
             }
@@ -1515,6 +1516,7 @@ function initStatistics(){
             systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s where communityid=\''+communityid+'\'  order by communityid,cast(sid as integer)';
         postgre.excuteSql(systeminfoSql,[],function (result){
             if(result.rowCount>0){
+                console.log('开始执行查询sql'+result.rowCount);
                 let systeminfoJson = [];
                 let communityId = '';
                 result.rows.forEach(function(data,index){
@@ -1527,9 +1529,12 @@ function initStatistics(){
                         communityId = data.communityid;
                     }
                     systeminfoJson.push(data);
-                    if(index==result.rows.length-1)
+                    if(index==result.rows.length-1){
                         redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
-                    cb;
+                        console.log('下面执行回调');
+                        cb;
+                    }
+
                 });
             }else{
                 redis.hdel(constUtils.TABLE_P_SYSTEMINFO,communityid);
