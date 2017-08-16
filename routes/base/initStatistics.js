@@ -1174,24 +1174,24 @@ function initStatistics(){
                 //无数据清0
                 if(communityid==undefined && middleObj['stat:c:'+data.communityid]!=undefined){
 
-                middleObj['stat:c:'+data.communityid].park.in=0;
-                middleObj['stat:c:'+data.communityid].park.out=0;
-                redis.hset('stat:c:'+data.communityid,'park',JSON.stringify(middleObj['stat:c:'+data.communityid].park));
-                redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
-                    middleObj['stat:r:' + deptid].park.in = 0;
-                    middleObj['stat:r:' + deptid].park.out = 0;
-                    redis.hset('stat:r:' + deptid, 'park', JSON.stringify(middleObj['stat:r:' + deptid].park));
-                });
-                redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
-                    middleObj['stat:g:' + deptid].park.in = 0;
-                    middleObj['stat:g:' + deptid].park.out = 0;
-                    redis.hset('stat:g:' + deptid, 'park', JSON.stringify(middleObj['stat:g:' + deptid].park));
-                });
-                redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
-                    middleObj['stat:h:' + deptid].park.in = 0;
-                    middleObj['stat:h:' + deptid].park.out = 0;
-                    redis.hset('stat:h:' + deptid, 'park', JSON.stringify(middleObj['stat:h:' + deptid].park));
-                });
+                    middleObj['stat:c:'+data.communityid].park.in=0;
+                    middleObj['stat:c:'+data.communityid].park.out=0;
+                    redis.hset('stat:c:'+data.communityid,'park',JSON.stringify(middleObj['stat:c:'+data.communityid].park));
+                    redis.hget('deptdict:'+data.communityid,'regionid',(deptid)=>{
+                        middleObj['stat:r:' + deptid].park.in = 0;
+                        middleObj['stat:r:' + deptid].park.out = 0;
+                        redis.hset('stat:r:' + deptid, 'park', JSON.stringify(middleObj['stat:r:' + deptid].park));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'groupid',(deptid)=>{
+                        middleObj['stat:g:' + deptid].park.in = 0;
+                        middleObj['stat:g:' + deptid].park.out = 0;
+                        redis.hset('stat:g:' + deptid, 'park', JSON.stringify(middleObj['stat:g:' + deptid].park));
+                    });
+                    redis.hget('deptdict:'+data.communityid,'haierid',(deptid)=>{
+                        middleObj['stat:h:' + deptid].park.in = 0;
+                        middleObj['stat:h:' + deptid].park.out = 0;
+                        redis.hset('stat:h:' + deptid, 'park', JSON.stringify(middleObj['stat:h:' + deptid].park));
+                    });
                 }
             });
             postgre.excuteSql(parkinSql,[],function (result){
@@ -1532,13 +1532,13 @@ function initStatistics(){
                     if(index==result.rows.length-1){
                         redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
                         console.log('下面执行回调');
-                        cb;
+                        if(cb !=undefined) cb(communityId,true);
                     }
 
                 });
             }else{
                 redis.hdel(constUtils.TABLE_P_SYSTEMINFO,communityid);
-                cb;
+                cb(communityId,true);
             }
         });
     };

@@ -2,6 +2,7 @@
 let constUtils = require('../../utils/constUtils');
 let postgre = require("../../utils/postgre");
 let redis = require("../../utils/redis");
+let initStatistics = require('./initStatistics');
 
 //  系统信息变更后入缓存
 let _sysinfo=function(communityids){
@@ -36,56 +37,118 @@ let _stat=function(communityid,types,typearrays,cb){
         case 'online'://统计系统在线
             let systemtypes=['','monitor','intercom','intrusion','info','gate','park','elevator','broadcast','patrol','location'];
             let systeminfoSql='select s.sid,s.status from '+constUtils.TABLE_P_SYSTEMINFO+' as s where s.communityid=$1 order by cast(s.sid as integer)';
-            console.log('处理统计系统在线'+communityid+'初始的系统类型'+systemtypes);
+            // console.log('处理统计系统在线'+communityid+'初始的系统类型'+systemtypes);
             postgre.excuteSql(systeminfoSql,[communityid],function (result){
-                console.log('处理统计系统在线'+communityid+'初始的系统类型'+systemtypes);
+                console.log('开始处理统计系统在线'+communityid+'初始的系统类型'+systemtypes);
                 if(result.rowCount>0){
+                    //有系统数据时候
                     redis.exists('stat:c:'+communityid,(isexists)=>{
                         if(isexists===1){
                             let calinfo={};
                             redis.hgetall('stat:c:'+communityid,(communitystats)=>{
                                 Object.keys(communitystats).forEach(function (field,index) {
                                     let oldstatinfo=JSON.parse(communitystats[field]);
+                                    let newstatinfo=JSON.parse(communitystats[field]);
                                     if(oldstatinfo['online']!=undefined && parseInt(oldstatinfo['online'])!=0)oldstatinfo['online']=0;
+
                                     result.rows.forEach(function(data){
                                         if(systemtypes[data.sid]==field){
-                                        let newonlie=0;
-                                        if(data.status !='0') newonlie=1;
-                                            calinfo[field]=newonlie-oldstatinfo.online;
-                                            oldstatinfo['online']=newonlie;
-                                            redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatinfo));
-                                            if(index==Object.keys(communitystats).length-1){
-                                                cb;
-                                            }
-                                            redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
-                                                redis.hget('stat:r:'+deptid,field,(regionstats)=>{
-                                                        let oldstatinfo=JSON.parse(regionstats);
-                                                        oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
-                                                        redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo));
-
-                                                });
-                                            });
-
-                                            redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
-                                                redis.hget('stat:g:'+deptid,field,(groupstats)=>{
-                                                        let oldstatinfo=JSON.parse(groupstats);
-                                                        oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
-                                                        redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo));
-                                                });
-
-                                            });
-                                            redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
-                                                redis.hget('stat:h:'+deptid,field,(haierstats)=>{
-                                                        let oldstatinfo=JSON.parse(haierstats);
-                                                        oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
-                                                        redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo));
-                                                });
-                                            });
+                                            let newonlie=0;
+                                            if(data.status !='0') newonlie=1;
+                                            oldstatinfo['online']+=newonlie;
+                                            calinfo[field]=parseInt(oldstatinfo['online'])-parseInt(newstatinfo['online']);
+                                        }else{
+                                            if(calinfo[field]==undefined)calinfo[field]=0;
                                         }
                                     });
+                                        redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatinfo));
+
+                                        redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                            redis.hget('stat:r:'+deptid,field,(regionstats)=>{
+                                                let oldstatinfo=JSON.parse(regionstats);
+                                                oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
+                                                redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo));
+
+                                            });
+                                        });
+
+                                        redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                            redis.hget('stat:g:'+deptid,field,(groupstats)=>{
+                                                let oldstatinfo=JSON.parse(groupstats);
+                                                oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
+                                                redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo));
+                                            });
+
+                                        });
+                                        redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                            redis.hget('stat:h:'+deptid,field,(haierstats)=>{
+                                                let oldstatinfo=JSON.parse(haierstats);
+                                                oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
+                                                redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo));
+                                            });
+                                        });
+                                    if(index==Object.keys(communitystats).length-1){
+                                        cb(true);
+                                    }
                                 });
                             });
+                        }else{
+                            //redis无此数据则需初始化
+                            let initstatistics = new initStatistics();
+                            initstatistics.createStatistics(communityid);
+                            cb(true);
+                        }
+                    });
+                }else{
+                    //无系统数据，需要清online
+                    redis.exists('stat:c:'+communityid,(isexists)=>{
+                        if(isexists===1){
+                            let calinfo={};
+                            redis.hgetall('stat:c:'+communityid,(communitystats)=>{
+                                Object.keys(communitystats).forEach(function (field,index) {
+                                    let oldstatinfo=JSON.parse(communitystats[field]);
 
+                                    if(oldstatinfo['online']!=undefined && parseInt(oldstatinfo['online'])!=0){
+                                        calinfo[field]=-oldstatinfo['online'];
+                                        oldstatinfo['online']=0;
+                                        redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatinfo));
+
+                                        redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                            redis.hget('stat:r:'+deptid,field,(regionstats)=>{
+                                                let oldstatinfo=JSON.parse(regionstats);
+                                                oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
+                                                redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo));
+
+                                            });
+                                        });
+
+                                        redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                            redis.hget('stat:g:'+deptid,field,(groupstats)=>{
+                                                let oldstatinfo=JSON.parse(groupstats);
+                                                oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
+                                                redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo));
+                                            });
+
+                                        });
+                                        redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                            redis.hget('stat:h:'+deptid,field,(haierstats)=>{
+                                                let oldstatinfo=JSON.parse(haierstats);
+                                                oldstatinfo['online']=+oldstatinfo['online']+calinfo[field];
+                                                redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo));
+                                            });
+                                        });
+                                    }
+
+                                    if(index==Object.keys(communitystats).length-1){
+                                        cb(true);
+                                    }
+                                });
+                            });
+                        }else{
+                            //redis无此数据则需初始化
+                            let initstatistics = new initStatistics();
+                            initstatistics.createStatistics(communityid);
+                            cb(true);
                         }
                     });
                 }
@@ -163,10 +226,10 @@ let _stat=function(communityid,types,typearrays,cb){
                                                     let oldstatbug={};
                                                     let oldstatdevicesta={};
                                                     oldstatinfo[field] = JSON.parse(regionstats);
-                                                        oldstatinfo[field]['camera']['sum']=+oldstatinfo[field]['camera']['sum']+calinfo[field]['camerasum'];
-                                                        oldstatinfo[field]['camera']['bug']=+oldstatinfo[field]['camera']['bug']+calinfo[field]['camerabug'];
-                                                        oldstatinfo[field]['dvr']['sum']=+oldstatinfo[field]['dvr']['sum']+calinfo[field]['dvrsum'];
-                                                        oldstatinfo[field]['dvr']['bug']=+oldstatinfo[field]['dvr']['bug']+calinfo[field]['dvrbug'];
+                                                    oldstatinfo[field]['camera']['sum']=+oldstatinfo[field]['camera']['sum']+calinfo[field]['camerasum'];
+                                                    oldstatinfo[field]['camera']['bug']=+oldstatinfo[field]['camera']['bug']+calinfo[field]['camerabug'];
+                                                    oldstatinfo[field]['dvr']['sum']=+oldstatinfo[field]['dvr']['sum']+calinfo[field]['dvrsum'];
+                                                    oldstatinfo[field]['dvr']['bug']=+oldstatinfo[field]['dvr']['bug']+calinfo[field]['dvrbug'];
                                                     redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo[field]));
 
                                                 });
@@ -255,7 +318,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                                 redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
                                                     redis.hget('stat:r:'+deptid,'sum',(regionstats)=>{
                                                         let oldstatsum={};
-                                                            oldstatsum = JSON.parse(regionstats);
+                                                        oldstatsum = JSON.parse(regionstats);
                                                         if(oldstatsum[field] != undefined)oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
                                                         redis.hset('stat:r:'+deptid,'sum',JSON.stringify(oldstatsum));
                                                     });
@@ -314,7 +377,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                                 });
 
                                             });
-                                        //统计上级机构
+                                            //统计上级机构
                                             redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
                                                 redis.hget('stat:r:'+deptid,field,(regionstats)=>{
                                                     let oldstatinfo={};
@@ -399,54 +462,54 @@ let _stat=function(communityid,types,typearrays,cb){
                             let calinfo={};
                             redis.hget('stat:c:'+communityid,'devicesta',(communitystats)=>{
                                 let oldstatdevicesta = JSON.parse(communitystats);
-                                    result.rows.forEach(function(data){
-                                        let online=+data.online;
-                                        let offline=+data.offline;
-                                        let bug=+data.bug;
-                                        let nobug=+data.nobug;
-                                        calinfo['online']=online-oldstatdevicesta.online;
-                                        calinfo['offline']=offline-oldstatdevicesta.offline;
-                                        calinfo['bug']=bug-oldstatdevicesta.bug;
-                                        calinfo['nobug']=nobug-oldstatdevicesta.nobug;
-                                        oldstatdevicesta['online']=online;
-                                        oldstatdevicesta['offline']=offline;
-                                        oldstatdevicesta['bug']=bug;
-                                        oldstatdevicesta['nobug']=nobug;
-                                        redis.hset('stat:c:'+communityid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                result.rows.forEach(function(data){
+                                    let online=+data.online;
+                                    let offline=+data.offline;
+                                    let bug=+data.bug;
+                                    let nobug=+data.nobug;
+                                    calinfo['online']=online-oldstatdevicesta.online;
+                                    calinfo['offline']=offline-oldstatdevicesta.offline;
+                                    calinfo['bug']=bug-oldstatdevicesta.bug;
+                                    calinfo['nobug']=nobug-oldstatdevicesta.nobug;
+                                    oldstatdevicesta['online']=online;
+                                    oldstatdevicesta['offline']=offline;
+                                    oldstatdevicesta['bug']=bug;
+                                    oldstatdevicesta['nobug']=nobug;
+                                    redis.hset('stat:c:'+communityid,'devicesta',JSON.stringify(oldstatdevicesta));
 
-                                        //统计上级机构
-                                        redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
-                                            redis.hget('stat:r:'+deptid,'devicesta',(regionstats)=>{
-                                                let oldstatdevicesta = JSON.parse(regionstats);
-                                                oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
-                                                oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
-                                                oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
-                                                oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
-                                                redis.hset('stat:r:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
-                                            });
-                                        });
-
-                                        redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
-                                            redis.hget('stat:g:'+deptid,'devicesta',(groupstats)=>{
-                                                let oldstatdevicesta = JSON.parse(groupstats);
-                                                oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
-                                                oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
-                                                oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
-                                                oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
-                                                redis.hset('stat:g:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
-                                            });
-                                        });
-                                        redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
-                                            redis.hget('stat:h:'+deptid,'devicesta',(haierstats)=>{
-                                                let oldstatdevicesta = JSON.parse(haierstats);
-                                                oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
-                                                oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
-                                                oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
-                                                oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
-                                                redis.hset('stat:h:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
-                                            });
+                                    //统计上级机构
+                                    redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                        redis.hget('stat:r:'+deptid,'devicesta',(regionstats)=>{
+                                            let oldstatdevicesta = JSON.parse(regionstats);
+                                            oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
+                                            oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
+                                            oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
+                                            oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
+                                            redis.hset('stat:r:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
                                         });
                                     });
+
+                                    redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                        redis.hget('stat:g:'+deptid,'devicesta',(groupstats)=>{
+                                            let oldstatdevicesta = JSON.parse(groupstats);
+                                            oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
+                                            oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
+                                            oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
+                                            oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
+                                            redis.hset('stat:g:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                        });
+                                    });
+                                    redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                        redis.hget('stat:h:'+deptid,'devicesta',(haierstats)=>{
+                                            let oldstatdevicesta = JSON.parse(haierstats);
+                                            oldstatdevicesta['online']=oldstatdevicesta['online']+calinfo['online'];
+                                            oldstatdevicesta['offline']=oldstatdevicesta['offline']+calinfo['offline'];
+                                            oldstatdevicesta['bug']=oldstatdevicesta['bug']+calinfo['bug'];
+                                            oldstatdevicesta['nobug']=oldstatdevicesta['nobug']+calinfo['nobug'];
+                                            redis.hset('stat:h:'+deptid,'devicesta',JSON.stringify(oldstatdevicesta));
+                                        });
+                                    });
+                                });
                             });
 
 
@@ -489,7 +552,7 @@ let _stat=function(communityid,types,typearrays,cb){
 
                                         redis.hget('stat:c:'+communityid,'alarm',(communitystats)=>{
                                             if(oldstatinfo==undefined)
-                                             oldstatinfo=JSON.parse(communitystats);
+                                                oldstatinfo=JSON.parse(communitystats);
                                             result.rows.forEach(function(data){
                                                 let alarm=data.alarm;
                                                 if(oldstatinfo[stattype] !=undefined){
@@ -541,7 +604,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                         let calinfo={};
                                         redis.hget('stat:c:'+communityid,stattype,(communitystats)=>{
 
-                                             let oldstatinfo=JSON.parse(communitystats);
+                                            let oldstatinfo=JSON.parse(communitystats);
                                             result.rows.forEach(function(data){
                                                 let alarm=data.alarm;
                                                 if(oldstatinfo['alarm'] !=undefined){
@@ -550,7 +613,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                                 }
                                                 redis.hset('stat:c:'+communityid,stattype,JSON.stringify(oldstatinfo));
 
-                                            //统计上级机构
+                                                //统计上级机构
 
                                                 redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
                                                     redis.hget('stat:r:'+deptid,stattype,(regionstats)=>{
@@ -593,66 +656,66 @@ let _stat=function(communityid,types,typearrays,cb){
             break;
         case 'parkio'://统计停车场进出
             let parkiosql='select o.communityid,sum(case when o.status=\'enter\'  then 1 else 0 end) as "in",sum(case when o.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  o where o.communityid=$1 group by o.communityid';
-                postgre.excuteSql(parkiosql,[communityid],function (result){
-                    if(result.rowCount>0){
-                        redis.exists('stat:c:'+communityid,(isexists)=>{
-                            if(isexists===1){
-                                let calinfo={};
-                                redis.hget('stat:c:'+communityid,'park',(communitystats)=>{
-                                    let oldstatinfo=JSON.parse(communitystats);
-                                    result.rows.forEach(function(data){
-                                        let parkin=data.in;
-                                        let parkout=data.out;
-                                        if(oldstatinfo['in'] !=undefined){
-                                            calinfo['in']=parkin-oldstatinfo['in'];
-                                            oldstatinfo['in']=parkin;
-                                        }
-                                        if(oldstatinfo['out'] !=undefined){
-                                            calinfo['out']=parkout-oldstatinfo['out'];
-                                            oldstatinfo['out']=parkout;
-                                        }
+            postgre.excuteSql(parkiosql,[communityid],function (result){
+                if(result.rowCount>0){
+                    redis.exists('stat:c:'+communityid,(isexists)=>{
+                        if(isexists===1){
+                            let calinfo={};
+                            redis.hget('stat:c:'+communityid,'park',(communitystats)=>{
+                                let oldstatinfo=JSON.parse(communitystats);
+                                result.rows.forEach(function(data){
+                                    let parkin=data.in;
+                                    let parkout=data.out;
+                                    if(oldstatinfo['in'] !=undefined){
+                                        calinfo['in']=parkin-oldstatinfo['in'];
+                                        oldstatinfo['in']=parkin;
+                                    }
+                                    if(oldstatinfo['out'] !=undefined){
+                                        calinfo['out']=parkout-oldstatinfo['out'];
+                                        oldstatinfo['out']=parkout;
+                                    }
                                     redis.hset('stat:c:'+communityid,'park',JSON.stringify(oldstatinfo));
 
-                                        //统计上级机构
-                                        redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
-                                            redis.hget('stat:r:'+deptid,'park',(regionstats)=>{
-                                                let oldstatinfo=JSON.parse(regionstats);
-                                                if(oldstatinfo['in'] != undefined)
-                                                    oldstatinfo['in']=+oldstatinfo['in']+calinfo['in'];
-                                                if(oldstatinfo['out'] != undefined)
-                                                    oldstatinfo['out']=+oldstatinfo['out']+calinfo['out'];
-                                                redis.hset('stat:r:'+deptid,'park',JSON.stringify(oldstatinfo));
-                                            });
+                                    //统计上级机构
+                                    redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                        redis.hget('stat:r:'+deptid,'park',(regionstats)=>{
+                                            let oldstatinfo=JSON.parse(regionstats);
+                                            if(oldstatinfo['in'] != undefined)
+                                                oldstatinfo['in']=+oldstatinfo['in']+calinfo['in'];
+                                            if(oldstatinfo['out'] != undefined)
+                                                oldstatinfo['out']=+oldstatinfo['out']+calinfo['out'];
+                                            redis.hset('stat:r:'+deptid,'park',JSON.stringify(oldstatinfo));
                                         });
-                                        redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
-                                            redis.hget('stat:g:'+deptid,'park',(groupstats)=>{
-                                                let oldstatinfo=JSON.parse(groupstats);
-                                                if(oldstatinfo['in'] != undefined)
-                                                    oldstatinfo['in']=+oldstatinfo['in']+calinfo['in'];
-                                                if(oldstatinfo['out'] != undefined)
-                                                    oldstatinfo['out']=+oldstatinfo['out']+calinfo['out'];
-                                                redis.hset('stat:g:'+deptid,'park',JSON.stringify(oldstatinfo));
+                                    });
+                                    redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                        redis.hget('stat:g:'+deptid,'park',(groupstats)=>{
+                                            let oldstatinfo=JSON.parse(groupstats);
+                                            if(oldstatinfo['in'] != undefined)
+                                                oldstatinfo['in']=+oldstatinfo['in']+calinfo['in'];
+                                            if(oldstatinfo['out'] != undefined)
+                                                oldstatinfo['out']=+oldstatinfo['out']+calinfo['out'];
+                                            redis.hset('stat:g:'+deptid,'park',JSON.stringify(oldstatinfo));
 
-                                            });
                                         });
-                                        redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
-                                            redis.hget('stat:h:'+deptid,'park',(haierstats)=>{
-                                                let oldstatinfo=JSON.parse(haierstats);
-                                                if(oldstatinfo['in'] != undefined)
-                                                    oldstatinfo['in']=+oldstatinfo['in']+calinfo['in'];
-                                                if(oldstatinfo['out'] != undefined)
-                                                    oldstatinfo['out']=+oldstatinfo['out']+calinfo['out'];
-                                                redis.hset('stat:h:'+deptid,'park',JSON.stringify(oldstatinfo));
-                                            });
+                                    });
+                                    redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                        redis.hget('stat:h:'+deptid,'park',(haierstats)=>{
+                                            let oldstatinfo=JSON.parse(haierstats);
+                                            if(oldstatinfo['in'] != undefined)
+                                                oldstatinfo['in']=+oldstatinfo['in']+calinfo['in'];
+                                            if(oldstatinfo['out'] != undefined)
+                                                oldstatinfo['out']=+oldstatinfo['out']+calinfo['out'];
+                                            redis.hset('stat:h:'+deptid,'park',JSON.stringify(oldstatinfo));
                                         });
                                     });
                                 });
+                            });
 
-                            }
-                            cb;
-                        });
-                    }
-                });
+                        }
+                        cb;
+                    });
+                }
+            });
             break;
         case 'broadcastinfo':
             let broadcastbroadSql='select t.communityid,count(id) as "onlinesum" FROM p_broadcast_record t where t.communityid=$1 and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid';
@@ -768,67 +831,67 @@ let _stat=function(communityid,types,typearrays,cb){
 
             break;
         case 'patrolinfo':
-        let patrolinfosql='select o.communityid,sum(case when o.result=\'0\'  then 1 else 0 end) as "not",sum(case when (o.result=\'1\' or o.result=\'2\') then 1 else 0 end) as "yet" from p_patrol_nightrecord as o where o.communityid=$1 group by o.communityid';
-        postgre.excuteSql(patrolinfosql,[communityid],function (result){
-            if(result.rowCount>0){
-                redis.exists('stat:c:'+communityid,(isexists)=>{
-                    if(isexists===1){
-                        let calinfo={};
-                        redis.hget('stat:c:'+communityid,'patrol',(communitystats)=>{
-                            let oldstatinfo=JSON.parse(communitystats);
-                            result.rows.forEach(function(data){
-                                let not=data.not;
-                                let yet=data.yet;
-                                if(oldstatinfo['not'] !=undefined){
-                                    calinfo['not']=not-oldstatinfo['not'];
-                                    oldstatinfo['not']=not;
-                                }
-                                if(oldstatinfo['yet'] !=undefined){
-                                    calinfo['yet']=yet-oldstatinfo['yet'];
-                                    oldstatinfo['yet']=yet;
-                                }
-                                redis.hset('stat:c:'+communityid,'patrol',JSON.stringify(oldstatinfo));
-                                //统计上级机构
-                                redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
-                                    redis.hget('stat:r:'+deptid,'patrol',(regionstats)=>{
-                                        let oldstatinfo=JSON.parse(regionstats);
-                                        if(oldstatinfo['not'] != undefined)
-                                            oldstatinfo['not']=+oldstatinfo['not']+calinfo['not'];
-                                        if(oldstatinfo['yet'] != undefined)
-                                            oldstatinfo['yet']=+oldstatinfo['yet']+calinfo['yet'];
-                                        redis.hset('stat:r:'+deptid,'patrol',JSON.stringify(oldstatinfo));
+            let patrolinfosql='select o.communityid,sum(case when o.result=\'0\'  then 1 else 0 end) as "not",sum(case when (o.result=\'1\' or o.result=\'2\') then 1 else 0 end) as "yet" from p_patrol_nightrecord as o where o.communityid=$1 group by o.communityid';
+            postgre.excuteSql(patrolinfosql,[communityid],function (result){
+                if(result.rowCount>0){
+                    redis.exists('stat:c:'+communityid,(isexists)=>{
+                        if(isexists===1){
+                            let calinfo={};
+                            redis.hget('stat:c:'+communityid,'patrol',(communitystats)=>{
+                                let oldstatinfo=JSON.parse(communitystats);
+                                result.rows.forEach(function(data){
+                                    let not=data.not;
+                                    let yet=data.yet;
+                                    if(oldstatinfo['not'] !=undefined){
+                                        calinfo['not']=not-oldstatinfo['not'];
+                                        oldstatinfo['not']=not;
+                                    }
+                                    if(oldstatinfo['yet'] !=undefined){
+                                        calinfo['yet']=yet-oldstatinfo['yet'];
+                                        oldstatinfo['yet']=yet;
+                                    }
+                                    redis.hset('stat:c:'+communityid,'patrol',JSON.stringify(oldstatinfo));
+                                    //统计上级机构
+                                    redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                        redis.hget('stat:r:'+deptid,'patrol',(regionstats)=>{
+                                            let oldstatinfo=JSON.parse(regionstats);
+                                            if(oldstatinfo['not'] != undefined)
+                                                oldstatinfo['not']=+oldstatinfo['not']+calinfo['not'];
+                                            if(oldstatinfo['yet'] != undefined)
+                                                oldstatinfo['yet']=+oldstatinfo['yet']+calinfo['yet'];
+                                            redis.hset('stat:r:'+deptid,'patrol',JSON.stringify(oldstatinfo));
+                                        });
                                     });
-                                });
-                                redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
-                                    redis.hget('stat:g:'+deptid,'patrol',(groupstats)=>{
-                                        let oldstatinfo=JSON.parse(groupstats);
-                                        if(oldstatinfo['not'] != undefined)
-                                            oldstatinfo['not']=+oldstatinfo['not']+calinfo['not'];
-                                        if(oldstatinfo['yet'] != undefined)
-                                            oldstatinfo['yet']=+oldstatinfo['yet']+calinfo['yet'];
-                                        redis.hset('stat:g:'+deptid,'patrol',JSON.stringify(oldstatinfo));
+                                    redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                        redis.hget('stat:g:'+deptid,'patrol',(groupstats)=>{
+                                            let oldstatinfo=JSON.parse(groupstats);
+                                            if(oldstatinfo['not'] != undefined)
+                                                oldstatinfo['not']=+oldstatinfo['not']+calinfo['not'];
+                                            if(oldstatinfo['yet'] != undefined)
+                                                oldstatinfo['yet']=+oldstatinfo['yet']+calinfo['yet'];
+                                            redis.hset('stat:g:'+deptid,'patrol',JSON.stringify(oldstatinfo));
 
+                                        });
                                     });
-                                });
-                                redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
-                                    redis.hget('stat:h:'+deptid,'patrol',(haierstats)=>{
-                                        let oldstatinfo=JSON.parse(haierstats);
-                                        if(oldstatinfo['not'] != undefined)
-                                            oldstatinfo['not']=+oldstatinfo['not']+calinfo['not'];
-                                        if(oldstatinfo['yet'] != undefined)
-                                            oldstatinfo['yet']=+oldstatinfo['yet']+calinfo['yet'];
-                                        redis.hset('stat:h:'+deptid,'patrol',JSON.stringify(oldstatinfo));
+                                    redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                        redis.hget('stat:h:'+deptid,'patrol',(haierstats)=>{
+                                            let oldstatinfo=JSON.parse(haierstats);
+                                            if(oldstatinfo['not'] != undefined)
+                                                oldstatinfo['not']=+oldstatinfo['not']+calinfo['not'];
+                                            if(oldstatinfo['yet'] != undefined)
+                                                oldstatinfo['yet']=+oldstatinfo['yet']+calinfo['yet'];
+                                            redis.hset('stat:h:'+deptid,'patrol',JSON.stringify(oldstatinfo));
+                                        });
                                     });
                                 });
                             });
-                        });
 
-                    }
-                    cb;
-                });
-            }
-        });
-        break;
+                        }
+                        cb;
+                    });
+                }
+            });
+            break;
         case 'othersum':
             if(typearrays instanceof Array && typearrays.length > 0){
                 let othersumsql='';
@@ -892,55 +955,55 @@ let _stat=function(communityid,types,typearrays,cb){
             }
             break;
         case 'card'://报警卡的统计
-                let cardsql='select p.communityid,count(p.communityid) as "card" from p_personlocation_givecard p where p.communityid=$1  group by p.communityid';
-                postgre.excuteSql(cardsql,[communityid],function (result){
-                    if(result.rowCount>0){
-                        redis.exists('stat:c:'+communityid,(isexists)=>{
-                            if(isexists===1){
-                                let calinfo={};
-                                redis.hget('stat:c:'+communityid,'location',(communitystats)=>{
-                                    let oldstatinfo=JSON.parse(communitystats);
-                                    result.rows.forEach(function(data){
-                                        let card=data.card;
-                                        if(oldstatinfo['card'] !=undefined){
-                                            calinfo['card']=card-oldstatinfo['card'];
-                                            oldstatinfo['card']=card;
-                                        }
-                                        redis.hset('stat:c:'+communityid,'location',JSON.stringify(oldstatinfo));
-                                        //统计上级机构
-                                        redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
-                                            redis.hget('stat:r:'+deptid,'location',(regionstats)=>{
-                                                let oldstatinfo=JSON.parse(regionstats);
-                                                if(oldstatinfo['card'] != undefined)
-                                                    oldstatinfo['card']+=+calinfo['card'];
-                                                redis.hset('stat:r:'+deptid,'location',JSON.stringify(oldstatinfo));
-                                            });
+            let cardsql='select p.communityid,count(p.communityid) as "card" from p_personlocation_givecard p where p.communityid=$1  group by p.communityid';
+            postgre.excuteSql(cardsql,[communityid],function (result){
+                if(result.rowCount>0){
+                    redis.exists('stat:c:'+communityid,(isexists)=>{
+                        if(isexists===1){
+                            let calinfo={};
+                            redis.hget('stat:c:'+communityid,'location',(communitystats)=>{
+                                let oldstatinfo=JSON.parse(communitystats);
+                                result.rows.forEach(function(data){
+                                    let card=data.card;
+                                    if(oldstatinfo['card'] !=undefined){
+                                        calinfo['card']=card-oldstatinfo['card'];
+                                        oldstatinfo['card']=card;
+                                    }
+                                    redis.hset('stat:c:'+communityid,'location',JSON.stringify(oldstatinfo));
+                                    //统计上级机构
+                                    redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                        redis.hget('stat:r:'+deptid,'location',(regionstats)=>{
+                                            let oldstatinfo=JSON.parse(regionstats);
+                                            if(oldstatinfo['card'] != undefined)
+                                                oldstatinfo['card']+=+calinfo['card'];
+                                            redis.hset('stat:r:'+deptid,'location',JSON.stringify(oldstatinfo));
                                         });
-                                        redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
-                                            redis.hget('stat:g:'+deptid,'location',(groupstats)=>{
-                                                let oldstatinfo=JSON.parse(groupstats);
-                                                if(oldstatinfo['card'] != undefined)
-                                                    oldstatinfo['card']+=+calinfo['card'];
-                                                redis.hset('stat:g:'+deptid,'location',JSON.stringify(oldstatinfo));
+                                    });
+                                    redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                        redis.hget('stat:g:'+deptid,'location',(groupstats)=>{
+                                            let oldstatinfo=JSON.parse(groupstats);
+                                            if(oldstatinfo['card'] != undefined)
+                                                oldstatinfo['card']+=+calinfo['card'];
+                                            redis.hset('stat:g:'+deptid,'location',JSON.stringify(oldstatinfo));
 
-                                            });
                                         });
-                                        redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
-                                            redis.hget('stat:h:'+deptid,'location',(haierstats)=>{
-                                                let oldstatinfo=JSON.parse(haierstats);
-                                                if(oldstatinfo['card'] != undefined)
-                                                    oldstatinfo['card']+=+calinfo['card'];
-                                                redis.hset('stat:h:'+deptid,'location',JSON.stringify(oldstatinfo));
-                                            });
+                                    });
+                                    redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                        redis.hget('stat:h:'+deptid,'location',(haierstats)=>{
+                                            let oldstatinfo=JSON.parse(haierstats);
+                                            if(oldstatinfo['card'] != undefined)
+                                                oldstatinfo['card']+=+calinfo['card'];
+                                            redis.hset('stat:h:'+deptid,'location',JSON.stringify(oldstatinfo));
                                         });
                                     });
                                 });
+                            });
 
-                            }
-                            cb;
-                        });
-                    }
-                });
+                        }
+                        cb;
+                    });
+                }
+            });
             break;
     }
 }
