@@ -112,7 +112,7 @@ function initStatistics(){
             let wherecondition2='';
             if(communityid !=undefined && communityid !='')
                 wherecondition2=' and t.communityid =\''+communityid+'\' ';
-            let monitorSql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videomonitor_deviceinfo t where t.status<>\'3\' '+wherecondition2+'group by t.communityid order by t.communityid';
+            let monitorSql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videomonitor_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'1\' ) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+'group by t.communityid order by t.communityid';
             postgre.excuteSql(monitorSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -203,9 +203,9 @@ function initStatistics(){
             console.log('现在初始化电梯监控系统的统计信息！');
             //电梯监控
             //设备数和警报数和故障数
-            let elevatorbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_elevator_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
-            let elevatoralarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct communityid,deviceid from p_devicealarm t where t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+') o group by o.communityid order by o.communityid';
-            let elevatorrealalarmSql='select  t.communityid,count(*) as "elevatoralarm" from p_devicealarm t where t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let elevatorbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_elevator_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'7\' ) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let elevatoralarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct t.communityid,t.deviceid from p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'7\' ) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+') o group by o.communityid order by o.communityid';
+            let elevatorrealalarmSql='select  t.communityid,count(*) as "elevatoralarm" from p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'7\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(elevatorbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -376,9 +376,9 @@ function initStatistics(){
             console.log('现在初始化可视对讲系统的统计信息！');
             //可视对讲
             //设备数和警报数和故障数
-            let intercombugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videointercom_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
-            let intercomalarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct communityid,deviceid from p_devicealarm t where t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+') o group by o.communityid order by o.communityid';
-            let intercomrealalarmSql='select t.communityid,count(t.communityid) as "intercomalarm" from p_devicealarm t where t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intercombugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_videointercom_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'2\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intercomalarmSql='select o.communityid,count(o.communityid) as "alarm" from(select distinct t.communityid,t.deviceid from p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'2\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+') o group by o.communityid order by o.communityid';
+            let intercomrealalarmSql='select t.communityid,count(t.communityid) as "intercomalarm" from p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'2\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(intercombugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -547,10 +547,10 @@ function initStatistics(){
             console.log('现在初始化人员定位系统的统计信息！');
             //人员定位
             //设备数和警报数和故障数和发卡数
-            let locationbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_personlocation_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
-            let locationalarmSql='select t.communityid,count(t.communityid) as "alarm" from p_personlocation_alarm t where t.alarmtype=\'1\' '+wherecondition2+'  group by t.communityid order by t.communityid';
-            let locationrealalarmSql='select t.communityid,count(t.communityid) as "locationalarm" from p_personlocation_alarm t where t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1  '+wherecondition2+' group by t.communityid order by t.communityid';
-            let locationcardSql='select t.communityid,count(t.communityid) as "card" from p_personlocation_givecard t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let locationbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_personlocation_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let locationalarmSql='select t.communityid,count(t.communityid) as "alarm" from p_personlocation_alarm ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  where t.alarmtype=\'1\' '+wherecondition2+'  group by t.communityid order by t.communityid';
+            let locationrealalarmSql='select t.communityid,count(t.communityid) as "locationalarm" from p_personlocation_alarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1  '+wherecondition2+' group by t.communityid order by t.communityid';
+            let locationcardSql='select t.communityid,count(t.communityid) as "card" from p_personlocation_givecard t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid  '+wherecondition2+' group by t.communityid order by t.communityid';
 
             postgre.excuteSql(locationbugSql,[],function (result){
                 if(result.rowCount>0){
@@ -725,8 +725,8 @@ function initStatistics(){
             console.log('现在初始化gate系统的统计信息！');
             //gate
             //设备数和警报数和故障数
-            let gatebugSql='select t.communityid,count(id) as "sum",SUM(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_gate_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
-            let gatealarmSql='select t.communityid,count(t.communityid) as "alarm" from p_devicealarm t where t.sid=\'5\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let gatebugSql='select t.communityid,count(id) as "sum",SUM(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_gate_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'5\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let gatealarmSql='select t.communityid,count(t.communityid) as "alarm" from p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'5\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.sid=\'5\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(gatebugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -831,7 +831,7 @@ function initStatistics(){
             console.log('现在初始化信息发布系统的统计信息！');
             //信息发布
             //设备数和故障数
-            let infobugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_infodiffusion_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let infobugSql='select t.communityid,count(t.id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_infodiffusion_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'4\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(infobugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -911,10 +911,10 @@ function initStatistics(){
             console.log('现在初始化入侵警报系统的统计信息！');
             //入侵警报
             //防区数和警报数
-            let intrusionsectionSql='select t.communityid,count(sectorid) as "sum" from p_alarm_sectorinfo t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let intrusionalarmSql='select t.communityid,count(t.communityid) as "alarm" from p_alarm_intrusion  t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let intrusionrealalarmSql='select t.communityid,count(t.communityid) as "intrusionalarm" from p_alarm_intrusion  t where t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let intrusionbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_alarm_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionsectionSql='select t.communityid,count(t.sectorid) as "sum" from p_alarm_sectorinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid  '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionalarmSql='select t.communityid,count(t.communityid) as "alarm" from p_alarm_intrusion  t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid  '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionrealalarmSql='select t.communityid,count(t.communityid) as "intrusionalarm" from p_alarm_intrusion  t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let intrusionbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_alarm_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(intrusionbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1077,9 +1077,8 @@ function initStatistics(){
             //车辆管理
             //车位数和入库数和出库数
             let parkportSql='select  t.communityid,total as "sum" from p_parking_parkareainfo t ,(select communityid,max(optdate) optdate  from p_parking_parkareainfo  group by communityid)m where t.communityid=m.communityid and t.optdate=m.optdate '+wherecondition2;
-            //let parkportSql='select t.communityid,total as "sum" from p_parking_parkareainfo t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let parkinSql='select t.communityid,sum(case when t.status=\'enter\'  then 1 else 0 end) as "in",sum(case when t.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  t where t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let parkbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_parking_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let parkinSql='select t.communityid,sum(case when t.status=\'enter\'  then 1 else 0 end) as "in",sum(case when t.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'6\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let parkbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_parking_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'6\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(parkbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1227,9 +1226,9 @@ function initStatistics(){
             console.log('现在初始化广播通讯系统的统计信息！');
             //广播通讯
             //在线分区和广播分区和广播状态
-            let broadcastbroadSql='select t.communityid,count(id) as "onlinesum" from p_broadcast_record t where t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let broadcastsectionSql='select t.communityid,sum(case when t.status=\'1\'  then 1 else 0 end) as "onlinearea",count(id) as "areasum" from p_broadcast_area as t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
-            let broadcastbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_broadcast_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let broadcastbroadSql='select t.communityid,count(t.id) as "onlinesum" from p_broadcast_record t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'8\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let broadcastsectionSql='select t.communityid,sum(case when t.status=\'1\'  then 1 else 0 end) as "onlinearea",count(id) as "areasum" from p_broadcast_area as t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'8\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid  '+wherecondition2+' group by t.communityid order by t.communityid';
+            let broadcastbugSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_broadcast_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'8\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(broadcastbugSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1373,8 +1372,8 @@ function initStatistics(){
             console.log('现在初始化电子巡更系统的统计信息！');
             //电子巡更
             //终端总数和已巡更次数和未巡更次数
-            let patrolsumSql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_patrol_deviceinfo t where t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
-            let patrolrecordSql='select t.communityid,sum(case when t.result=\'0\'  then 1 else 0 end) as "not",sum(case when (t.result=\'1\' or t.result=\'2\'   ) then 1 else 0 end) as "yet" from p_patrol_nightrecord as t where 1=1 '+wherecondition2+' group by t.communityid order by t.communityid';
+            let patrolsumSql='select t.communityid,count(t.id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" from p_patrol_deviceinfo t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'9\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.status<>\'3\' '+wherecondition2+' group by t.communityid order by t.communityid';
+            let patrolrecordSql='select t.communityid,sum(case when t.result=\'0\'  then 1 else 0 end) as "not",sum(case when (t.result=\'1\' or t.result=\'2\'   ) then 1 else 0 end) as "yet" from p_patrol_nightrecord as t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'9\') gl where gl.communityid=t.communityid and gl.systemid=t.systemid  '+wherecondition2+' group by t.communityid order by t.communityid';
             postgre.excuteSql(patrolsumSql,[],function (result){
                 if(result.rowCount>0){
                     result.rows.forEach(function(data){
@@ -1538,7 +1537,7 @@ function initStatistics(){
                 });
             }else{
                 redis.hdel(constUtils.TABLE_P_SYSTEMINFO,communityid);
-                cb(communityId,true);
+                cb(communityid,true);
             }
         });
     };

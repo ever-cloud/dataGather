@@ -15,9 +15,11 @@ let _sysinfo=function(communityids){
                         let systeminfoJson = [];
                         result.rows.forEach(function(data,index){
                             systeminfoJson.push(data);
-                            if(index==result.rows.length-1)
+                            if(index==result.rows.length-1){
                                 redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityid,JSON.stringify(systeminfoJson));
-                            _stat(communityid,'online');
+                                _stat(communityid,'online');
+                            }
+
                         });
                     }
                 });
@@ -173,9 +175,9 @@ let _stat=function(communityid,types,typearrays,cb){
             let deviceinfosql='';
             sysdevicetables.forEach((deviceinfotable,dindex)=>{
                 if(deviceinfotable=='p_videomonitor_deviceinfo'){
-                    deviceinfosql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t where t.communityid=$1 and t.status<>\'3\' group by t.communityid';
+                    deviceinfosql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM p_systemmaptable smt,t_community_system cs where cs.sid=smt.sid and smt.tablename='+deviceinfotable+' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and t.communityid=$1 and t.status<>\'3\' group by t.communityid';
                 }else{
-                    deviceinfosql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t where t.status<>\'3\' and t.communityid=$1 group by t.communityid ';
+                    deviceinfosql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM p_systemmaptable smt,t_community_system cs where cs.sid=smt.sid and smt.tablename=\''+deviceinfotable+'\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and t.status<>\'3\' and t.communityid=$1 group by t.communityid ';
                 }
                 postgre.excuteSql(deviceinfosql,[communityid],function (result){
                     if(result.rowCount>0){
@@ -436,7 +438,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                         }
                                         redis.hset('stat:c:' + communityid, field, JSON.stringify(oldstatinfo[field]));
                                     });
-                                    cb;
+                                    cb(true);
                                 });
                             }
                         });
@@ -447,7 +449,7 @@ let _stat=function(communityid,types,typearrays,cb){
             let statsysdevicetables=['p_videomonitor_deviceinfo','p_videointercom_deviceinfo','p_alarm_deviceinfo','p_infodiffusion_deviceinfo','p_gate_deviceinfo','p_parking_deviceinfo','p_elevator_deviceinfo','p_broadcast_deviceinfo','p_patrol_deviceinfo','p_personlocation_deviceinfo'];
             let devicestatsql='select stat.communityid,sum(stat.online) as "online",sum(stat.offline) as "offline",sum(stat.bug) as "bug",sum(stat.nobug) as "nobug" from(';
             statsysdevicetables.forEach((tablename,index)=>{
-                devicestatsql+='SELECT t.communityid,sum(1)-sum(case when t.status=\'0\'  then 1 else 0 end) as "online",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline",sum(case when  t.status=\'2\' then 1 else 0 end) as "bug",sum(1)-sum(case when  t.status=\'2\' then 1 else 0 end) as "nobug" FROM '+tablename+' t where t.communityid=$1 and t.status<>\'3\' group by t.communityid ';
+                devicestatsql+='SELECT t.communityid,sum(1)-sum(case when t.status=\'0\'  then 1 else 0 end) as "online",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline",sum(case when  t.status=\'2\' then 1 else 0 end) as "bug",sum(1)-sum(case when  t.status=\'2\' then 1 else 0 end) as "nobug" FROM '+tablename+' t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM p_systemmaptable smt,t_community_system cs where cs.sid=smt.sid and smt.tablename=\''+tablename+'\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 and t.status<>\'3\' group by t.communityid ';
                 if(index != statsysdevicetables.length-1){
 
                     devicestatsql+=' union all ';
@@ -514,7 +516,7 @@ let _stat=function(communityid,types,typearrays,cb){
 
 
                         }
-                        cb;
+                        cb(true);
                     });
                 }
             });
@@ -527,19 +529,19 @@ let _stat=function(communityid,types,typearrays,cb){
                     let realalarmsql='';
                     let alarmservicesql='';
                     if(stattype=='elevator'){
-                        realalarmsql='select t.communityid,count(t.communityid) as "alarm" FROM p_devicealarm t where t.communityid=$1 and t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid ';
-                        alarmservicesql='select o.communityid,count(o.communityid) as "alarm" from(SELECT distinct communityid,deviceid FROM p_devicealarm t where t.communityid=$1 and t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1) o group by o.communityid';
+                        realalarmsql='select t.communityid,count(t.communityid) as "alarm" FROM p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'7\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 and t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid ';
+                        alarmservicesql='select o.communityid,count(o.communityid) as "alarm" from(SELECT distinct t.communityid,t.deviceid FROM p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'7\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 and t.sid=\'7\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1) o group by o.communityid';
                     }else if(stattype=='intrusion'){
-                        realalarmsql='select o.communityid,count(o.communityid) as "alarm" from p_alarm_intrusion  o where o.communityid=$1 and o.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by o.communityid';
-                        alarmservicesql='select o.communityid,count(o.communityid) as "alarm" from p_alarm_intrusion  o where o.communityid=$1  group by o.communityid';
+                        realalarmsql='select o.communityid,count(o.communityid) as "alarm" from p_alarm_intrusion  o ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\' and cs.communityid=$1) gl where gl.communityid=o.communityid and gl.systemid=o.systemid and  o.communityid=$1 and o.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by o.communityid';
+                        alarmservicesql='select o.communityid,count(o.communityid) as "alarm" from p_alarm_intrusion  o ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\' and cs.communityid=$1) gl where gl.communityid=o.communityid and gl.systemid=o.systemid and  o.communityid=$1  group by o.communityid';
                     }else if(stattype=='intercom'){
-                        realalarmsql='select o.communityid,count(o.communityid) as "alarm" from p_devicealarm o where o.communityid=$1 and o.sid=\'2\' and o."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by o.communityid';
-                        alarmservicesql='select o.communityid,count(o.communityid) as "alarm" from(SELECT distinct communityid,deviceid FROM p_devicealarm t where t.communityid=$1 and t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1) o group by o.communityid';
+                        realalarmsql='select o.communityid,count(o.communityid) as "alarm" from p_devicealarm o ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'2\' and cs.communityid=$1) gl where gl.communityid=o.communityid and gl.systemid=o.systemid and  o.communityid=$1 and o.sid=\'2\' and o."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by o.communityid';
+                        alarmservicesql='select o.communityid,count(o.communityid) as "alarm" from(SELECT distinct t.communityid,t.deviceid FROM p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'2\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 and t.sid=\'2\' and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1) o group by o.communityid';
                     }else if(stattype=='location'){
-                        realalarmsql='select p.communityid,count(p.communityid) as "alarm" from p_personlocation_alarm p where p.communityid=$1 and p.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1  group by p.communityid';
-                        alarmservicesql='select p.communityid,count(p.communityid) as "alarm" from p_personlocation_alarm p where p.communityid=$1 and p.alarmtype=\'1\'   group by p.communityid';
+                        realalarmsql='select p.communityid,count(p.communityid) as "alarm" from p_personlocation_alarm p ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\' and cs.communityid=$1) gl where gl.communityid=p.communityid and gl.systemid=p.systemid and  p.communityid=$1 and p.datetime BETWEEN CURRENT_DATE and CURRENT_DATE+1  group by p.communityid';
+                        alarmservicesql='select p.communityid,count(p.communityid) as "alarm" from p_personlocation_alarm p ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\' and cs.communityid=$1) gl where gl.communityid=p.communityid and gl.systemid=p.systemid and  p.communityid=$1 and p.alarmtype=\'1\'   group by p.communityid';
                     }else if(stattype=='gate'){
-                        alarmservicesql='select t.communityid,count(t.communityid) as "alarm" from p_devicealarm t where t.communityid=$1 and t.sid=\'5\'  group by t.communityid';
+                        alarmservicesql='select t.communityid,count(t.communityid) as "alarm" from p_devicealarm t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'5\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 and t.sid=\'5\'  group by t.communityid';
                     }
                     if(realalarmsql != ''){
 
@@ -591,7 +593,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                         });
 
                                     }
-                                    cb;
+                                    cb(true);
                                 });
                             }
                         });
@@ -644,7 +646,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                         });
 
                                     }
-                                    cb;
+                                    cb(true);
                                 });
                             }
                         });
@@ -655,7 +657,7 @@ let _stat=function(communityid,types,typearrays,cb){
             }
             break;
         case 'parkio'://统计停车场进出
-            let parkiosql='select o.communityid,sum(case when o.status=\'enter\'  then 1 else 0 end) as "in",sum(case when o.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  o where o.communityid=$1 group by o.communityid';
+            let parkiosql='select o.communityid,sum(case when o.status=\'enter\'  then 1 else 0 end) as "in",sum(case when o.status=\'leave\'  then 1 else 0 end) as "out" from p_parking_carrecord  o ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'6\' and cs.communityid=$1) gl where gl.communityid=o.communityid and gl.systemid=o.systemid and  o.communityid=$1 group by o.communityid';
             postgre.excuteSql(parkiosql,[communityid],function (result){
                 if(result.rowCount>0){
                     redis.exists('stat:c:'+communityid,(isexists)=>{
@@ -712,14 +714,14 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb;
+                        cb(true);
                     });
                 }
             });
             break;
         case 'broadcastinfo':
-            let broadcastbroadSql='select t.communityid,count(id) as "onlinesum" FROM p_broadcast_record t where t.communityid=$1 and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid';
-            let broadcastsectionSql='select o.communityid,sum(case when o.status=\'1\'  then 1 else 0 end) as "onlinearea",count(id) as "areasum" from p_broadcast_area as o where o.communityid=$1 group by o.communityid';
+            let broadcastbroadSql='select t.communityid,count(t.id) as "onlinesum" FROM p_broadcast_record t ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'8\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 and t."datetime" BETWEEN CURRENT_DATE and CURRENT_DATE+1 group by t.communityid';
+            let broadcastsectionSql='select o.communityid,sum(case when o.status=\'1\'  then 1 else 0 end) as "onlinearea",count(id) as "areasum" from p_broadcast_area as o ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'8\' and cs.communityid=$1) gl where gl.communityid=o.communityid and gl.systemid=o.systemid and  o.communityid=$1 group by o.communityid';
             postgre.excuteSql(broadcastbroadSql,[communityid],function (result){
                 if(result.rowCount>0){
                     redis.exists('stat:c:'+communityid,(isexists)=>{
@@ -764,7 +766,7 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb;
+                        cb(true);
                     });
                 }
                 postgre.excuteSql(broadcastsectionSql,[communityid],function (result){
@@ -822,7 +824,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                 });
 
                             }
-                            cb;
+                            cb(true);
                         });
                     }
                 });
@@ -831,7 +833,7 @@ let _stat=function(communityid,types,typearrays,cb){
 
             break;
         case 'patrolinfo':
-            let patrolinfosql='select o.communityid,sum(case when o.result=\'0\'  then 1 else 0 end) as "not",sum(case when (o.result=\'1\' or o.result=\'2\') then 1 else 0 end) as "yet" from p_patrol_nightrecord as o where o.communityid=$1 group by o.communityid';
+            let patrolinfosql='select o.communityid,sum(case when o.result=\'0\'  then 1 else 0 end) as "not",sum(case when (o.result=\'1\' or o.result=\'2\') then 1 else 0 end) as "yet" from p_patrol_nightrecord as o,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'9\' and cs.communityid=$1) gl where gl.communityid=o.communityid and gl.systemid=o.systemid and  o.communityid=$1 group by o.communityid';
             postgre.excuteSql(patrolinfosql,[communityid],function (result){
                 if(result.rowCount>0){
                     redis.exists('stat:c:'+communityid,(isexists)=>{
@@ -887,7 +889,7 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb;
+                        cb(true);
                     });
                 }
             });
@@ -897,9 +899,9 @@ let _stat=function(communityid,types,typearrays,cb){
                 let othersumsql='';
                 typearrays.forEach((stattype,dindex)=>{
                     if(stattype=='park'){
-                        othersumsql='select  t.communityid,total as "sum" from p_parking_parkareainfo t ,(select communityid,max(optdate) optdate  from p_parking_parkareainfo  group by communityid)m where t.communityid=m.communityid and t.optdate=m.optdate and t.communityid=$1 ';
+                        othersumsql='select  t.communityid,t.total as "sum" from p_parking_parkareainfo t ,(select communityid,max(optdate) optdate  from p_parking_parkareainfo  group by communityid)m where t.communityid=m.communityid and t.optdate=m.optdate and t.communityid=$1 ';
                     }else if(stattype=='intrusion'){
-                        othersumsql='select t.communityid,count(sectorid) as "sum" from p_alarm_sectorinfo t  where t.communityid=$1 group by t.communityid';
+                        othersumsql='select t.communityid,count(t.sectorid) as "sum" from p_alarm_sectorinfo t  ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'3\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and  t.communityid=$1 group by t.communityid';
                     }
                     postgre.excuteSql(othersumsql,[communityid],function (result){
                         if(result.rowCount>0){
@@ -945,7 +947,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                     });
 
                                 }
-                                cb;
+                                cb(true);
                             });
                         }
                     });
@@ -955,7 +957,7 @@ let _stat=function(communityid,types,typearrays,cb){
             }
             break;
         case 'card'://报警卡的统计
-            let cardsql='select p.communityid,count(p.communityid) as "card" from p_personlocation_givecard p where p.communityid=$1  group by p.communityid';
+            let cardsql='select p.communityid,count(p.communityid) as "card" from p_personlocation_givecard p ,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM t_community_system cs where cs.sid=\'10\' and cs.communityid=$1) gl where gl.communityid=p.communityid and gl.systemid=p.systemid and  p.communityid=$1  group by p.communityid';
             postgre.excuteSql(cardsql,[communityid],function (result){
                 if(result.rowCount>0){
                     redis.exists('stat:c:'+communityid,(isexists)=>{
@@ -1000,7 +1002,7 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb;
+                        cb(true);
                     });
                 }
             });
