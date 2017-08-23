@@ -130,5 +130,127 @@ postgredb.getInsertDBSql=function(tablename,jsondate,jsonextend){
     //console.log('insert sqlJson is:'+result_json);
     return result_json;
 };
+/**
+ * 校验数据是否正确，包括每条数据必须包括id，字符长度及日期格式，数字格式 return {sta:error right,msg:{}}
+*/
+postgredb.getTbleColInfo=function(tablename,jsonbody,cb){
+    let querySql='select t.column_name as colname,t.udt_name as coltype,t.character_maximum_length as collen from information_schema.columns t where t.table_name = $1';
+    let colinfo={};
+    let jsondata=jsonbody.data;
+    postgredb.excuteSql(querySql,tablename,function(queryresult){
+        if(result.rowCount>0) {
+            result.rows.forEach(function (data) {
+                if(data.coltype=='varchar'){
+                    colinfo[data.colname]={coltype:data.coltype,collen:data.collen};
+                }else {
+                    colinfo[data.colname]={coltype:data.coltype};
+                }
+            });
+        }
+        cb(postgredb.checkDate(jsondata,colinfo));
+    });
+}
+postgredb.checkDate=function(jsondata,colinfo,cb){
+    if((typeof jsondata)=='object' && Object.keys(jsondata).length>0) {
+        let checkresult=dataCheck.checktypelen(jsondata,colinfo);
+        return checkresult;
+    }
+}
+let dataCheck={
+    //检查是否有id属性
+    checkid: function (jsondatas) {
+        let haveId = true;
+        let errdata ='';
+        for (let jsondata of jsondatas) {
+            let inhaveId =  false;
+            try {
+                Object.keys(jsondata).forEach((key, index) => {
+                    if (key.toLowerCase() == 'id') {
+                        inhaveId = true;
 
+                        foreach.break = new Error("normal Stop");
+                    }
+                });
+                if (!inhaveId) {
+                    haveId = false;
+                    errdata+=JSON.stringify(jsondata);
+                }
+
+            } catch (e) {
+                if (e.message === "foreach is not defined") {
+                } else throw e;
+            }
+        }
+        if (haveId) {
+            return {status: haveId, msg: '数据包含id，正确！'};
+        } else {
+            return {status: haveId, msg: '上传数据中有id数据不存在！数据为：'+errdata};
+        }
+    },
+    //检查字符串数据对应类型的长度、数值范围
+    checktypelen:function (jsondatas,colinfo) {
+        let checkid=this.checkid(jsondatas);
+        if(checkid.status){
+            let validdata = true;
+            let errdata ='';
+            for (let jsondata of jsondatas) {
+                let invaliddata =  false;
+                try {
+                    Object.keys(jsondata).forEach((key, index) => {
+                        //varchar类型判断长度
+                        if (colinfo[key]['coltype'] == 'varchar') {
+                            if(jsondata.key.length>colinfo[key]['collen']){
+
+                                errdata+=key+':'+jsondata.key+' 超长；';
+                                invaliddata = true;
+                            }
+                        }else if(colinfo[key]['coltype'] == 'timestamp'){
+                            //timestamp
+                            if(isNaN(new Date(jsondata.key).getTime()) || jsondata.key ==''){
+                                errdata+=key+':'+jsondata.key+' 时间格式错误；';
+                                invaliddata = true;
+                            }else if(new Date(jsondata.key).getTime()>new Date().getTime() || new Date(jsondata.key).getTime()<0){
+                                errdata+=key+':'+jsondata.key+' 时间超出范围；';
+                                invaliddata = true;
+                            }
+                        }else if(colinfo[key]['coltype'] == 'date'){
+                            //timestamp
+                            if(isNaN(new Date(jsondata.key).getTime()) || jsondata.key ==''){
+                                errdata+=key+':'+jsondata.key+' 时间格式错误；';
+                                invaliddata = true;
+                            }else if(!/\d{4}-(0{0,1}[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])/.test(jsondata.key)){
+                                errdata+=key+':'+jsondata.key+' 时间格式错误；';
+                                invaliddata = true;
+                            }else if(new Date(jsondata.key).getTime()>new Date().getTime() || new Date(jsondata.key).getTime()<0){
+                                errdata+=key+':'+jsondata.key+' 时间超出范围；';
+                                invaliddata = true;
+                            }
+                        }else if(colinfo[key]['coltype'] == 'numeric'){
+                            //timestamp
+                            if(isNaN(jsondata.key)){
+                                errdata+=key+':'+jsondata.key+' 不是数字；';
+                                invaliddata = true;
+                            }
+                        }
+                    });
+                    if (invaliddata) {
+                        validdata = false;
+                    }
+
+                } catch (e) {
+                    if (e.message === "foreach is not defined") {
+                    } else throw e;
+                }
+            }
+            if (haveId) {
+                return {status: haveId, msg: '数据格式和长度正确！'};
+            } else {
+                return {status: haveId, msg: '上传数据中有不规范数据存在！提示：'+errdata};
+            }
+        }else {
+            return  checkid;
+        }
+
+    }
+}
 module.exports = postgredb;

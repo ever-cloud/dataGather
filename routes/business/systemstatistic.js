@@ -41,8 +41,6 @@ router.use('/systemstatistic', function(req, res, next) {
             ids.forEach(function(item,index) {
                 let initstatistics = new initStatistics();
                 if(index==ids.length-1)startGetDate=true;
-                // initstatistics.createSysteminfo(item,handle.stat(item,'online',[],initstatistics.publishTopic(item,getRedisDate(ids,prestat,res,startGetDate))));
-                // initstatistics.createSysteminfo(item,handle.stat(item,'online',[],getRedisDate(ids,prestat,res,startGetDate)));
                 initstatistics.createSysteminfo(item,statOnline);
             });
         }else{

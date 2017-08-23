@@ -48,6 +48,10 @@ constData.WORK_LOGIN_NOUSER = "4004" ;
  */
 constData.WORK_LOGIN_PASSERR = "4005" ;
 /**
+ * @name {数据校验不正确}
+ */
+constData.WORK_DATA_ERR = "4006" ;
+/**
  * @name {系统错误}
  */
 constData.WORK_SYSTEM_ERROR = "7000" ;
