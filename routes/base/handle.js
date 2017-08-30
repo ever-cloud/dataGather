@@ -60,7 +60,7 @@ let _stat=function(communityid,types,typearrays,cb){
                                             oldstatinfo['online']+=newonlie;
                                             calinfo[field]=parseInt(oldstatinfo['online'])-parseInt(newstatinfo['online']);
                                         }else{
-                                            if(calinfo[field]==undefined)calinfo[field]=0;
+                                            if(calinfo[field]==undefined)calinfo[field]=-newstatinfo['online'];
                                         }
                                     });
                                         redis.hset('stat:c:'+communityid,field,JSON.stringify(oldstatinfo));
@@ -90,7 +90,10 @@ let _stat=function(communityid,types,typearrays,cb){
                                             });
                                         });
                                     if(index==Object.keys(communitystats).length-1){
-                                        cb(true);
+                                        if(cb != undefined && cb !=null){
+                                            cb(true);
+                                        }
+
                                     }
                                 });
                             });
@@ -98,7 +101,9 @@ let _stat=function(communityid,types,typearrays,cb){
                             //redis无此数据则需初始化
                             let initstatistics = new initStatistics();
                             initstatistics.createStatistics(communityid);
-                            cb(true);
+                            if(cb != undefined && cb !=null){
+                                cb(true);
+                            }
                         }
                     });
                 }else{
@@ -142,7 +147,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                     }
 
                                     if(index==Object.keys(communitystats).length-1){
-                                        cb(true);
+                                        if(cb != undefined && cb !=null){
+                                            cb(true);
+                                        }
                                     }
                                 });
                             });
@@ -150,7 +157,9 @@ let _stat=function(communityid,types,typearrays,cb){
                             //redis无此数据则需初始化
                             let initstatistics = new initStatistics();
                             initstatistics.createStatistics(communityid);
-                            cb(true);
+                            if(cb != undefined && cb !=null){
+                                cb(true);
+                            }
                         }
                     });
                 }
@@ -175,10 +184,11 @@ let _stat=function(communityid,types,typearrays,cb){
             let deviceinfosql='';
             sysdevicetables.forEach((deviceinfotable,dindex)=>{
                 if(deviceinfotable=='p_videomonitor_deviceinfo'){
-                    deviceinfosql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM p_systemmaptable smt,t_community_system cs where cs.sid=smt.sid and smt.tablename='+deviceinfotable+' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and t.communityid=$1 and t.status<>\'3\' group by t.communityid';
+                    deviceinfosql='select t.communityid,sum(case when t.devicetype=\'camera\'  then 1 else 0 end) as "camerasum",sum(case when t.devicetype=\'camera\'  and t.status=\'2\' then 1 else 0 end) as "camerabug",sum(case when t.devicetype=\'dvr\'  then 1 else 0 end) as "dvrsum",sum(case when t.devicetype=\'dvr\' and t.status=\'2\' then 1 else 0 end) as "dvrbug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM p_systemmaptable smt,t_community_system cs where cs.sid=smt.sid and smt.tablename=\''+deviceinfotable+'\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and t.communityid=$1 and t.status<>\'3\' group by t.communityid';
                 }else{
                     deviceinfosql='select t.communityid,count(id) as "sum",sum(case when t.status=\'2\' then 1 else 0 end) as "bug",sum(case when t.status=\'0\'  then 1 else 0 end) as "offline" FROM '+deviceinfotable+' t,(SELECT cs.communityid,cs.sid,cs.systemid,cs.status FROM p_systemmaptable smt,t_community_system cs where cs.sid=smt.sid and smt.tablename=\''+deviceinfotable+'\' and cs.communityid=$1) gl where gl.communityid=t.communityid and gl.systemid=t.systemid and t.status<>\'3\' and t.communityid=$1 group by t.communityid ';
                 }
+                let field = systemtypes_2[dindex];
                 postgre.excuteSql(deviceinfosql,[communityid],function (result){
                     if(result.rowCount>0){
                         redis.exists('stat:c:'+communityid,(isexists)=>{
@@ -187,8 +197,8 @@ let _stat=function(communityid,types,typearrays,cb){
                                 let oldstatinfo = {};  //缓存中各系统统计信息
                                 let oldstatsum = {};    //缓存中合计统计信息
                                 let oldstatbug = {};     //缓存中故障统计信息
-                                redis.hget('stat:c:'+communityid,systemtypes_2[dindex],(communitystats)=> {
-                                    let field = systemtypes_2[dindex];
+                                redis.hget('stat:c:'+communityid,field,(communitystats)=> {
+
                                     calinfo[field] = {};
                                     calinfo['sum'] = {};
                                     calinfo['bug'] = {};
@@ -438,7 +448,272 @@ let _stat=function(communityid,types,typearrays,cb){
                                         }
                                         redis.hset('stat:c:' + communityid, field, JSON.stringify(oldstatinfo[field]));
                                     });
-                                    cb(true);
+                                    if(cb != undefined && cb !=null){
+                                        cb(true);
+                                    }
+                                });
+                            }
+                        });
+                    }else{
+                        //无记录，也就是删除了系统后需要删除对应数据
+                        redis.exists('stat:c:'+communityid,(isexists)=>{
+                            if(isexists===1){
+                                let calinfo={};//存放临时差异值
+                                let oldstatinfo = {};  //缓存中各系统统计信息
+                                let oldstatsum = {};    //缓存中合计统计信息
+                                let oldstatbug = {};     //缓存中故障统计信息
+                                redis.hget('stat:c:'+communityid,field,(communitystats)=> {
+
+                                    calinfo[field] = {};
+                                    calinfo['sum'] = {};
+                                    calinfo['bug'] = {};
+                                    oldstatinfo[field] = JSON.parse(communitystats);
+                                        if (field == 'monitor') {
+                                            let camerasum = 0;
+                                            let camerabug = 0;
+                                            let dvrsum = 0;
+                                            let dvrbug = 0;
+                                            calinfo[field]['camerasum'] = +camerasum - oldstatinfo[field].camera.sum;
+                                            calinfo[field]['camerabug'] = +camerabug - oldstatinfo[field].camera.bug;
+                                            calinfo[field]['dvrsum'] = +dvrsum - oldstatinfo[field].dvr.sum;
+                                            calinfo[field]['dvrbug'] = +dvrbug - oldstatinfo[field].dvr.bug;
+                                            oldstatinfo[field]['camera']['sum'] = camerasum;
+                                            oldstatinfo[field]['camera']['bug'] = camerabug;
+                                            oldstatinfo[field]['dvr']['sum'] = dvrsum;
+                                            oldstatinfo[field]['dvr']['bug'] = dvrbug;
+                                            calinfo['sum'][field] = calinfo[field]['camerasum'] + calinfo[field]['dvrsum'];
+                                            calinfo['bug'][field] = calinfo[field]['camerabug'] + calinfo[field]['dvrbug'];
+                                            redis.hget('stat:c:'+communityid,'sum',(sumstats)=> {
+                                                oldstatsum = JSON.parse(sumstats);
+                                                oldstatsum[field] = +camerasum + dvrsum;
+                                                redis.hset('stat:c:' + communityid, 'sum', JSON.stringify(oldstatsum));
+                                            });
+                                            redis.hget('stat:c:'+communityid,'bug',(bugstats)=> {
+                                                oldstatbug = JSON.parse(bugstats);
+                                                oldstatbug[field] = +camerabug + dvrbug;
+                                                redis.hset('stat:c:' + communityid, 'bug', JSON.stringify(oldstatbug));
+
+                                            });
+                                            //统计上级
+                                            redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                                redis.hget('stat:r:'+deptid,field,(regionstats)=>{
+                                                    let oldstatinfo={};
+                                                    let oldstatsum={};
+                                                    let oldstatbug={};
+                                                    let oldstatdevicesta={};
+                                                    oldstatinfo[field] = JSON.parse(regionstats);
+                                                    oldstatinfo[field]['camera']['sum']=+oldstatinfo[field]['camera']['sum']+calinfo[field]['camerasum'];
+                                                    oldstatinfo[field]['camera']['bug']=+oldstatinfo[field]['camera']['bug']+calinfo[field]['camerabug'];
+                                                    oldstatinfo[field]['dvr']['sum']=+oldstatinfo[field]['dvr']['sum']+calinfo[field]['dvrsum'];
+                                                    oldstatinfo[field]['dvr']['bug']=+oldstatinfo[field]['dvr']['bug']+calinfo[field]['dvrbug'];
+                                                    redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo[field]));
+
+                                                });
+                                                redis.hget('stat:r:'+deptid,'sum',(sumstats)=> {
+                                                    oldstatsum = JSON.parse(sumstats);
+                                                    oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
+                                                    redis.hset('stat:r:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                });
+                                                redis.hget('stat:r:'+deptid,'bug',(bugstats)=> {
+                                                    oldstatbug = JSON.parse(bugstats);
+                                                    oldstatbug[field]=oldstatbug[field]+calinfo['bug'][field];
+                                                    redis.hset('stat:r:'+deptid,'bug',JSON.stringify(oldstatbug));
+                                                });
+                                            });
+                                            redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                                redis.hget('stat:g:'+deptid,field,(groupstats)=>{
+                                                    let oldstatinfo={};
+                                                    let oldstatsum={};
+                                                    let oldstatbug={};
+                                                    let oldstatdevicesta={};
+                                                    oldstatinfo[field] = JSON.parse(groupstats);
+                                                    oldstatinfo[field]['camera']['sum']=+oldstatinfo[field]['camera']['sum']+calinfo[field]['camerasum'];
+                                                    oldstatinfo[field]['camera']['bug']=+oldstatinfo[field]['camera']['bug']+calinfo[field]['camerabug'];
+                                                    oldstatinfo[field]['dvr']['sum']=+oldstatinfo[field]['dvr']['sum']+calinfo[field]['dvrsum'];
+                                                    oldstatinfo[field]['dvr']['bug']=+oldstatinfo[field]['dvr']['bug']+calinfo[field]['dvrbug'];
+                                                    redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo[field]));
+
+                                                });
+                                                redis.hget('stat:g:'+deptid,'sum',(sumstats)=> {
+                                                    oldstatsum = JSON.parse(sumstats);
+                                                    oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
+                                                    redis.hset('stat:g:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                });
+                                                redis.hget('stat:g:'+deptid,'bug',(bugstats)=> {
+                                                    oldstatbug = JSON.parse(bugstats);
+                                                    oldstatbug[field]=oldstatbug[field]+calinfo['bug'][field];
+                                                    redis.hset('stat:g:'+deptid,'bug',JSON.stringify(oldstatbug));
+                                                });
+                                            });
+                                            redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                                redis.hget('stat:h:'+deptid,field,(haierstats)=>{
+                                                    let oldstatinfo={};
+                                                    let oldstatsum={};
+                                                    let oldstatbug={};
+                                                    let oldstatdevicesta={};
+                                                    oldstatinfo[field] = JSON.parse(haierstats);
+                                                    oldstatinfo[field]['camera']['sum']=+oldstatinfo[field]['camera']['sum']+calinfo[field]['camerasum'];
+                                                    oldstatinfo[field]['camera']['bug']=+oldstatinfo[field]['camera']['bug']+calinfo[field]['camerabug'];
+                                                    oldstatinfo[field]['dvr']['sum']=+oldstatinfo[field]['dvr']['sum']+calinfo[field]['dvrsum'];
+                                                    oldstatinfo[field]['dvr']['bug']=+oldstatinfo[field]['dvr']['bug']+calinfo[field]['dvrbug'];
+                                                    redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo[field]));
+
+                                                });
+                                                redis.hget('stat:h:'+deptid,'sum',(sumstats)=> {
+                                                    oldstatsum = JSON.parse(sumstats);
+                                                    oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
+                                                    redis.hset('stat:h:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                });
+                                                redis.hget('stat:h:'+deptid,'bug',(bugstats)=> {
+                                                    oldstatbug = JSON.parse(bugstats);
+                                                    oldstatbug[field]=oldstatbug[field]+calinfo['bug'][field];
+                                                    redis.hset('stat:h:'+deptid,'bug',JSON.stringify(oldstatbug));
+                                                });
+                                            });
+                                        }else{
+                                            let sum = 0;
+                                            let bug = 0;
+                                            if (oldstatinfo[field].sum != undefined)
+                                                calinfo[field]['sum'] = sum - oldstatinfo[field].sum;
+                                            if (oldstatinfo[field].bug != undefined)
+                                                calinfo[field]['bug'] = bug - oldstatinfo[field].bug;
+                                            if (oldstatinfo[field].sum != undefined && field != 'intrusion' && field != 'park') {
+                                                oldstatinfo[field]['sum'] = sum;
+                                            }
+                                            if (oldstatinfo[field].bug != undefined) {
+                                                oldstatinfo[field]['bug'] = bug;
+                                            }
+                                            redis.hget('stat:c:'+communityid,'sum',(sumstats)=> {
+                                                oldstatsum = JSON.parse(sumstats);
+                                                if (oldstatsum[field] != undefined) {
+                                                    calinfo['sum'][field] = sum - oldstatsum[field];
+                                                    oldstatsum[field] = sum;
+                                                }
+                                                redis.hset('stat:c:' + communityid, 'sum', JSON.stringify(oldstatsum));
+                                                //统计上级机构
+                                                redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                                    redis.hget('stat:r:'+deptid,'sum',(regionstats)=>{
+                                                        let oldstatsum={};
+                                                        oldstatsum = JSON.parse(regionstats);
+                                                        if(oldstatsum[field] != undefined)oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
+                                                        redis.hset('stat:r:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                    });
+                                                });
+                                                redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                                    redis.hget('stat:g:'+deptid,'sum',(groupstats)=>{
+                                                        let oldstatsum={};
+                                                        oldstatsum = JSON.parse(groupstats);
+                                                        if(oldstatsum[field] != undefined)oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
+                                                        redis.hset('stat:g:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                    });
+                                                });
+                                                redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                                    redis.hget('stat:h:'+deptid,'sum',(haierstats)=>{
+                                                        let oldstatsum={};
+                                                        oldstatsum = JSON.parse(haierstats);
+                                                        if(oldstatsum[field] != undefined)oldstatsum[field]=oldstatsum[field]+calinfo['sum'][field];
+                                                        redis.hset('stat:h:'+deptid,'sum',JSON.stringify(oldstatsum));
+                                                    });
+                                                });
+
+
+                                            });
+                                            redis.hget('stat:c:'+communityid,'bug',(bugstats)=> {
+                                                oldstatbug = JSON.parse(bugstats);
+                                                if (oldstatbug[field] != undefined) {
+                                                    calinfo['bug'][field] = bug - oldstatbug[field];
+                                                    oldstatbug[field] = bug;
+                                                }
+                                                redis.hset('stat:c:' + communityid, 'bug', JSON.stringify(oldstatbug));
+
+                                                //统计上级机构
+                                                redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                                    redis.hget('stat:r:'+deptid,'bug',(regionstats)=>{
+                                                        let oldstatbug={};
+                                                        oldstatbug = JSON.parse(regionstats);
+                                                        if(oldstatbug[field] != undefined)oldstatbug[field]=oldstatbug[field]+calinfo['bug'][field];
+                                                        redis.hset('stat:r:'+deptid,'bug',JSON.stringify(oldstatbug));
+                                                    });
+                                                });
+                                                redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                                    redis.hget('stat:g:'+deptid,'bug',(groupstats)=>{
+                                                        let oldstatbug={};
+                                                        oldstatbug = JSON.parse(groupstats);
+                                                        if(oldstatbug[field] != undefined)oldstatbug[field]=oldstatbug[field]+calinfo['bug'][field];
+                                                        redis.hset('stat:g:'+deptid,'bug',JSON.stringify(oldstatbug));
+                                                    });
+                                                });
+                                                redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                                    redis.hget('stat:h:'+deptid,'bug',(haierstats)=>{
+                                                        let oldstatbug={};
+                                                        oldstatbug = JSON.parse(haierstats);
+                                                        if(oldstatbug[field] != undefined)oldstatbug[field]=oldstatbug[field]+calinfo['bug'][field];
+                                                        redis.hset('stat:h:'+deptid,'bug',JSON.stringify(oldstatbug));
+                                                    });
+                                                });
+
+                                            });
+                                            //统计上级机构
+                                            redis.hget('deptdict:'+communityid,'regionid',(deptid)=>{
+                                                redis.hget('stat:r:'+deptid,field,(regionstats)=>{
+                                                    let oldstatinfo={};
+                                                    let oldstatdevicesta={};
+                                                    if (field == 'devicesta') {
+                                                        oldstatdevicesta = JSON.parse(regionstats);
+                                                    } else {
+                                                        oldstatinfo[field] = JSON.parse(regionstats);
+                                                    }
+                                                    if(oldstatinfo[field].sum !=undefined && field !='intrusion' && field !='park'){
+                                                        oldstatinfo[field]['sum']=+oldstatinfo[field]['sum']+calinfo[field]['sum'];
+                                                    }
+                                                    if(oldstatinfo[field].bug !=undefined) {
+                                                        oldstatinfo[field]['bug']=+oldstatinfo[field]['bug']+calinfo[field]['bug'];
+                                                    }
+                                                    redis.hset('stat:r:'+deptid,field,JSON.stringify(oldstatinfo[field]));
+                                                });
+                                            });
+                                            redis.hget('deptdict:'+communityid,'groupid',(deptid)=>{
+                                                redis.hget('stat:g:'+deptid,field,(groupstats)=>{
+                                                    let oldstatinfo={};
+                                                    let oldstatdevicesta={};
+                                                    if (field == 'devicesta') {
+                                                        oldstatdevicesta = JSON.parse(groupstats);
+                                                    } else {
+                                                        oldstatinfo[field] = JSON.parse(groupstats);
+                                                    }
+                                                    if(oldstatinfo[field].sum !=undefined && field !='intrusion' && field !='park'){
+                                                        oldstatinfo[field]['sum']=+oldstatinfo[field]['sum']+calinfo[field]['sum'];
+                                                    }
+                                                    if(oldstatinfo[field].bug !=undefined) {
+                                                        oldstatinfo[field]['bug']=+oldstatinfo[field]['bug']+calinfo[field]['bug'];
+                                                    }
+                                                    redis.hset('stat:g:'+deptid,field,JSON.stringify(oldstatinfo[field]));
+                                                });
+                                            });
+                                            redis.hget('deptdict:'+communityid,'haierid',(deptid)=>{
+                                                redis.hget('stat:h:'+deptid,field,(haierstats)=>{
+                                                    let oldstatinfo={};
+                                                    let oldstatdevicesta={};
+                                                    if (field == 'devicesta') {
+                                                        oldstatdevicesta = JSON.parse(haierstats);
+                                                    } else {
+                                                        oldstatinfo[field] = JSON.parse(haierstats);
+                                                    }
+                                                    if(oldstatinfo[field].sum !=undefined && field !='intrusion' && field !='park'){
+                                                        oldstatinfo[field]['sum']=+oldstatinfo[field]['sum']+calinfo[field]['sum'];
+                                                    }
+                                                    if(oldstatinfo[field].bug !=undefined) {
+                                                        oldstatinfo[field]['bug']=+oldstatinfo[field]['bug']+calinfo[field]['bug'];
+                                                    }
+                                                    redis.hset('stat:h:'+deptid,field,JSON.stringify(oldstatinfo[field]));
+                                                });
+                                            });
+
+                                        }
+                                        redis.hset('stat:c:' + communityid, field, JSON.stringify(oldstatinfo[field]));
+                                    if(cb != undefined && cb !=null){
+                                        cb(true);
+                                    }
                                 });
                             }
                         });
@@ -516,7 +791,9 @@ let _stat=function(communityid,types,typearrays,cb){
 
 
                         }
-                        cb(true);
+                        if(cb != undefined && cb !=null){
+                            cb(true);
+                        }
                     });
                 }
             });
@@ -593,7 +870,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                         });
 
                                     }
-                                    cb(true);
+                                    if(cb != undefined && cb !=null){
+                                        cb(true);
+                                    }
                                 });
                             }
                         });
@@ -646,7 +925,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                         });
 
                                     }
-                                    cb(true);
+                                    if(cb != undefined && cb !=null){
+                                        cb(true);
+                                    }
                                 });
                             }
                         });
@@ -714,7 +995,9 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb(true);
+                        if(cb != undefined && cb !=null){
+                            cb(true);
+                        }
                     });
                 }
             });
@@ -766,7 +1049,9 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb(true);
+                        if(cb != undefined && cb !=null){
+                            cb(true);
+                        }
                     });
                 }
                 postgre.excuteSql(broadcastsectionSql,[communityid],function (result){
@@ -824,7 +1109,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                 });
 
                             }
-                            cb(true);
+                            if(cb != undefined && cb !=null){
+                                cb(true);
+                            }
                         });
                     }
                 });
@@ -889,7 +1176,9 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb(true);
+                        if(cb != undefined && cb !=null){
+                            cb(true);
+                        }
                     });
                 }
             });
@@ -947,7 +1236,9 @@ let _stat=function(communityid,types,typearrays,cb){
                                     });
 
                                 }
-                                cb(true);
+                                if(cb != undefined && cb !=null){
+                                    cb(true);
+                                }
                             });
                         }
                     });
@@ -1002,7 +1293,9 @@ let _stat=function(communityid,types,typearrays,cb){
                             });
 
                         }
-                        cb(true);
+                        if(cb != undefined && cb !=null){
+                            cb(true);
+                        }
                     });
                 }
             });

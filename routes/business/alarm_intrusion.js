@@ -14,16 +14,19 @@ let postgredb = require('../../utils/postgre');
  *
  *
  */
-router.use('/intrusion', function(req, res) {
+router.use('/intrusion', function(req, res,next) {
     let log=log4js.config(__dirname+'/../../',jsName,logName);
-    let json = req.body;
+    let json = req.body;    
+    let communityid=json.userInfo.communityId;
+    let tablename=constUtils.TABLE_P_ALARM_INTRUSION;
+    let jsondatas=json.data;
+    jsondatas=postgredb.concatid(jsondatas,tablename,communityid);
     let seckey = json.seckey;
     if(seckey!='' && seckey!=undefined && seckey!=null) {
         postgredb.getTbleColInfo(constUtils.TABLE_P_ALARM_INTRUSION,json,uploadData);
 
     }
-    console.log("111111111111111111111111111111111111111");
-    let uploadData=function (checkResult) {
+    function uploadData(checkResult) {
         if(checkResult.status){
             seckeyPool.get(seckey, function (loginuser) {
                 if (loginuser != null) {
@@ -33,13 +36,13 @@ router.use('/intrusion', function(req, res) {
                     json['optDate'] = moment().format('YYYY-MM-DD');
                     publisher.publish(destination, JSON.stringify(json));
                     log.info(loginuser, json);
-                    res.send('{"code":' + constUtils.WORK_UPLOAD_SUCCESS + ',"msg":"[入侵报警系统报警信息]数据上传ActiveMq成功！"} 上传时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
+                    res.send('{"code":' + constUtils.WORK_UPLOAD_SUCCESS + ',"msg":"[入侵报警系统报警信息]数据上传ActiveMq成功！"} 上传时间:' + moment().format('YYYY-MM-DD HH:mm:ss'));
                 }else{
-                    res.send('{"code":' + constUtils.WORK_QUERY_FAIL + ',"msg":"[入侵报警系统报警信息]无效seckey，操作不成功！"} 时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
+                    res.send('{"code":' + constUtils.WORK_QUERY_FAIL + ',"msg":"[入侵报警系统报警信息]无效seckey，操作不成功！"}  上传时间:' + moment().format('YYYY-MM-DD HH:mm:ss'));
                 }
             });
         }else{
-            res.send('{"code":' + constUtils.WORK_DATA_ERR + ',"msg":"[入侵报警系统报警信息]数据不正确，上传失败！具体为：'+checkResult+'"} 时间:' + moment().format('YYYY-MM-DD hh:mm:ss'));
+            res.send('{"code":' + constUtils.WORK_DATA_ERR + ',"msg":[入侵报警系统报警信息]数据不正确，上传失败！失败原因：'+JSON.stringify(checkResult.msg).replace(/\\/g,"")+'}  上传时间:' + moment().format('YYYY-MM-DD HH:mm:ss'));
         }
     }
 

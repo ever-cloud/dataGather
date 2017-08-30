@@ -213,6 +213,52 @@ constData.QUEUE_P_ALARM_INTRUSION = queue+constData.TABLE_P_ALARM_INTRUSION;
  */
 constData.TABLE_P_ALARM_DEVICEINFO = "p_alarm_deviceinfo";
 constData.QUEUE_P_ALARM_DEVICEINFO = queue+constData.TABLE_P_ALARM_DEVICEINFO;
+
+/**
+ *
+ * @name {各表组成唯一id校验}
+ */
+constData.pk={
+    "p_videomonitor_deviceinfo":['communityid','systemId','deviceId'],
+    "p_videointercom_deviceinfo":['communityid','systemId','deviceId'],
+    "p_videointercom_opengate":['communityid','systemId','gateDeviceId','dateTime'],
+    "p_videointercom_call":['communityid','systemId','receiverDeviceId','callUpdate'],
+    "p_systemstatusinfo":['communityid','systemId','curdate'],
+    "t_community_system":['communityid','sid','systemId'],
+    "p_personlocation_givecard":['communityid','systemId','cardId'],
+    "p_personlocation_alarm":['communityid','systemId','cardId','dateTime'],
+    "p_personlocation_deviceinfo":['communityid','systemId','deviceId'],
+    "p_patrol_nightrecord":['communityid','systemId','deviceId'],
+    "p_patrol_deviceinfo":['communityid','systemId','deviceId'],
+    "p_parking_parkareainfo":['communityid','systemId','curdate'],
+    "p_parking_deviceinfo":['communityid','systemId','deviceId'],
+    "p_parking_caruserinfo":['communityid','systemId','carNO'],
+    "p_parking_carrecord":['communityid','systemId','carno','dateTime'],
+    "p_infodiffusion_deviceinfo":['communityid','systemId','deviceId'],
+    "p_infodiffusion_inforecord":['communityid','systemId','infoId'],
+    "p_gate_open":['communityid','systemId','gateDeviceId','dateTime'],
+    "p_gate_deviceinfo":['communityid','systemId','deviceId'],
+    "p_erroralarmcode":['communityid','systemId','type','code'],
+    "p_elevator_deviceinfo":['communityid','systemId','deviceId'],
+    "p_devicestatusinfo":['communityid','sid','systemId','deviceId','curdate'],
+    "p_devicefault":['communityid','sid','systemId','deviceId','dateTime'],
+    "p_devicealarm":['communityid','sid','systemId','deviceId','dateTime'],
+    "p_broadcast_record":['communityid','systemId','areaId','dateTime'],
+    "p_broadcast_deviceinfo":['communityid','systemId','deviceId'],
+    "p_broadcast_area":['communityid','systemId','id'],
+    "p_alarm_sectorinfo":['communityid','systemId','sectorId'],
+    "p_alarm_intrusion":['communityid','systemId','sectorId','dateTime'],
+    "p_alarm_deviceinfo":['communityid','systemId','deviceId'],
+
+}
+
+constData.curdateToString=function(){
+    var day = new Date();
+    var Year= ''+day.getFullYear();//ie火狐下都可以
+    var Month= ''+(day.getMonth()+1);
+    var Day = ''+day.getDate();
+    return Year+Month+Day;
+}
 /**
  * @name {物联系统统计主题}
  */

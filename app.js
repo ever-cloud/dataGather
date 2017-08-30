@@ -45,32 +45,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 fs.existsSync(path.resolve(__dirname,'logs')) || fs.mkdirSync(path.resolve(__dirname,'logs'));
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
-//初始化社区物联十系统信息入redis开始
-
-// //初始化社区物联十系统信息入redis开始
-// let systeminfoSql='select s.* from '+constUtils.TABLE_P_SYSTEMINFO+' as s order by communityid,cast(sid as integer)';
-// postgre.excuteSql(systeminfoSql,[],function (result){
-//     if(result.rowCount>0){
-//         let systeminfoJson = [];
-//         let communityId = '';
-//         result.rows.forEach(function(data,index){
-//             if(index===0){
-//                 communityId = data.communityid;
-//             }
-//             if(communityId != data.communityid){
-//                 redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
-//                 systeminfoJson = [];
-//                 communityId = data.communityid;
-//             }
-//             systeminfoJson.push(data);
-//             if(index==result.rows.length-1)
-//             redis.hset(constUtils.TABLE_P_SYSTEMINFO,communityId,JSON.stringify(systeminfoJson));
-//         });
-//     }
-// });
-//系统id对应系统设备信息表名
-
-
 
 let systemMapTableSql='select * from p_systemmaptable order by cast(sid as INTEGER)';
 postgre.excuteSql(systemMapTableSql,[],function (result){

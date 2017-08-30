@@ -35,8 +35,8 @@ router.use('/systemstatistic', function(req, res, next) {
             break;
     }
 
+    let startGetDate=false;
     if(ids.length>0){
-        let startGetDate=false;
         if(prestat=='stat:c:'){
             ids.forEach(function(item,index) {
                 let initstatistics = new initStatistics();
@@ -48,8 +48,10 @@ router.use('/systemstatistic', function(req, res, next) {
         }
     }
     function statOnline(communityid,completed){
-        if(completed)
-        handle.stat(communityid,'online',[],getSystemDate);
+        if(completed){
+            handle.stat(communityid,'devicestatus',[])
+            handle.stat(communityid,'online',[],getSystemDate);
+        }
     }
     function getSystemDate(startGetDate){
         if(startGetDate)

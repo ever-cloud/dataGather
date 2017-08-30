@@ -2,6 +2,21 @@
  * Created by mumianhua on 2017/3/23.
  */
 var path=require('path');
+let constUtils = require('../../utils/constUtils');
+let myjson=[{'system':'1',deviceid:'333','unit':''},{'system':'3',deviceid:'555','unit':'2'}]
+function gid(json) {
+    json.id=json.system+json.deviceid+json.unit;
+    return json;
+}
+for (let jsondata of myjson){
+
+    jsondata=gid(jsondata);
+}
+console.log(JSON.stringify(myjson));
+let tablename='p_videomonitor_deviceinfo';
+constUtils.pk[tablename].forEach(function (key,index) {
+    console.log(key);
+})
 // var http = require('http');
 // var express = require('express');
 // var app = express();
@@ -17,9 +32,10 @@ var path=require('path');
 //     console.log('and this matches too'+req);
 //     res.end();
 // });
-let m;
-console.log(m==undefined);
-console.log(typeof m);
+// console.log(constUtils[constUtils.TABLE_P_ALARM_DEVICEINFO]);
+// let m;
+// console.log(m==undefined);
+// console.log(typeof m);
 //  //
 // let buf = ['1','1','1',''];
 //

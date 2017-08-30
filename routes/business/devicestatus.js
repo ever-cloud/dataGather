@@ -13,7 +13,7 @@ let logName = jsName.replace('\.js','\.log');
  */
 router.use('/devicestatus', function(req, res, next) {
     let log=log4js.config(__dirname+'/../../',jsName,logName);
-    let json = req.body;
+    let json = req.body;    
     let role = json.role;
     let ids = json.ids;
     let prestat='';

@@ -8,6 +8,7 @@ let moment = require('moment');
 let log4js = require('./logger');
 let jsName = __filename.substr(__dirname.length+1);
 let logName = jsName.replace('\.js','\.log');
+let constUtils = require('./constUtils');
 // 数据库配置
 
 let pconf = require('../properties/config');
@@ -137,13 +138,15 @@ postgredb.getTbleColInfo=function(tablename,jsonbody,cb){
     let querySql='select t.column_name as colname,t.udt_name as coltype,t.character_maximum_length as collen from information_schema.columns t where t.table_name = $1';
     let colinfo={};
     let jsondata=jsonbody.data;
-    postgredb.excuteSql(querySql,tablename,function(queryresult){
+    let params=[];
+    params.push(tablename);
+    postgredb.excuteSql(querySql,params,function(result){
         if(result.rowCount>0) {
             result.rows.forEach(function (data) {
                 if(data.coltype=='varchar'){
-                    colinfo[data.colname]={coltype:data.coltype,collen:data.collen};
+                    colinfo[data.colname]={"coltype":data.coltype,"collen":data.collen};
                 }else {
-                    colinfo[data.colname]={coltype:data.coltype};
+                    colinfo[data.colname]={"coltype":data.coltype};
                 }
             });
         }
@@ -156,16 +159,38 @@ postgredb.checkDate=function(jsondata,colinfo,cb){
         return checkresult;
     }
 }
+//根据规则拼凑id
+postgredb.concatid=function(jsondatas,tablename,communityid){
+    let curdate=constUtils.curdateToString();
+    let timeCol=['dateTime','callUpdate'];
+    for (let jsondata of jsondatas) {
+        let curId=communityid;
+        constUtils.pk[tablename].forEach(function (key,index) {
+            if(jsondata[key] !=undefined){
+                if(timeCol.indexOf(key)>-1 && ! isNaN(new Date(jsondata[key]).getTime())){
+                    curId+=new Date(jsondata[key]).getTime();
+                }else{
+                    curId+=jsondata[key];
+                }
+            }
+            if(key=='curdate')curId+=curdate;
+        });
+        jsondata.id=curId;
+    }
+    return jsondatas;
+}
 let dataCheck={
-    //检查是否有id属性
+    //检查是否有id属性和是否包含联合主键
     checkid: function (jsondatas) {
         let haveId = true;
+        let havePkIds = true;
         let errdata ='';
         for (let jsondata of jsondatas) {
             let inhaveId =  false;
+
             try {
                 Object.keys(jsondata).forEach((key, index) => {
-                    if (key.toLowerCase() == 'id') {
+                    if (key.toLowerCase() == 'id' && jsondata[key].length>0) {
                         inhaveId = true;
 
                         foreach.break = new Error("normal Stop");
@@ -176,15 +201,33 @@ let dataCheck={
                     errdata+=JSON.stringify(jsondata);
                 }
 
+                constUtils.pk[tablename].forEach(function (key,index) {
+                    if(key !='communityid' && key !='curdate'){
+                        if(jsondata[key] ==undefined ){
+                            havePkIds = false;
+                            errdata+=key+' 字段不存在；';
+                        }else if(jsondata[key] ==''){
+                            havePkIds = false;
+                            errdata+=key+' 字段值为空；';
+                        }
+                    }
+
+                });
+
             } catch (e) {
                 if (e.message === "foreach is not defined") {
                 } else throw e;
             }
         }
         if (haveId) {
-            return {status: haveId, msg: '数据包含id，正确！'};
+            if(havePkIds){
+
+                return {status: havePkIds, msg: '数据包含id及联合主键，正确！'};
+            }else{
+                return {status: havePkIds, msg: '上传数据中关键字段数据错误！字段数据：'+errdata};
+            }
         } else {
-            return {status: haveId, msg: '上传数据中有id数据不存在！数据为：'+errdata};
+            return {status: haveId, msg: '上传数据中所有关键字段数据不存在！数据：'+errdata};
         }
     },
     //检查字符串数据对应类型的长度、数值范围
@@ -197,38 +240,42 @@ let dataCheck={
                 let invaliddata =  false;
                 try {
                     Object.keys(jsondata).forEach((key, index) => {
-                        //varchar类型判断长度
-                        if (colinfo[key]['coltype'] == 'varchar') {
-                            if(jsondata.key.length>colinfo[key]['collen']){
+                        //判断不在数据表集合中
+                        if (colinfo[key.toLowerCase()] == undefined) {
+                                errdata+=key+' 字段不存在；';
+                                invaliddata = true;
+                        }else if (colinfo[key.toLowerCase()]['coltype'] == 'varchar') {
+                            //varchar类型判断长度
+                            if(jsondata[key].length>colinfo[key.toLowerCase()]['collen']){
 
-                                errdata+=key+':'+jsondata.key+' 超长；';
+                                errdata+=key+':'+jsondata[key]+' 超长；';
                                 invaliddata = true;
                             }
-                        }else if(colinfo[key]['coltype'] == 'timestamp'){
+                        }else if(colinfo[key.toLowerCase()]['coltype'] == 'timestamp'){
                             //timestamp
-                            if(isNaN(new Date(jsondata.key).getTime()) || jsondata.key ==''){
-                                errdata+=key+':'+jsondata.key+' 时间格式错误；';
+                            if(isNaN(new Date(jsondata[key]).getTime()) || jsondata[key] ==''){
+                                errdata+=key+':'+jsondata[key]+' 时间格式错误；';
                                 invaliddata = true;
-                            }else if(new Date(jsondata.key).getTime()>new Date().getTime() || new Date(jsondata.key).getTime()<0){
-                                errdata+=key+':'+jsondata.key+' 时间超出范围；';
+                            }else if(new Date(jsondata[key]).getTime()>new Date().getTime() || new Date(jsondata[key]).getTime()<0){
+                                errdata+=key+':'+jsondata[key]+' 时间超出范围；';
                                 invaliddata = true;
                             }
-                        }else if(colinfo[key]['coltype'] == 'date'){
+                        }else if(colinfo[key.toLowerCase()]['coltype'] == 'date'){
                             //timestamp
-                            if(isNaN(new Date(jsondata.key).getTime()) || jsondata.key ==''){
-                                errdata+=key+':'+jsondata.key+' 时间格式错误；';
+                            if(isNaN(new Date(jsondata[key]).getTime()) || jsondata[key] ==''){
+                                errdata+=key+':'+jsondata[key]+' 时间格式错误；';
                                 invaliddata = true;
-                            }else if(!/\d{4}-(0{0,1}[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])/.test(jsondata.key)){
-                                errdata+=key+':'+jsondata.key+' 时间格式错误；';
+                            }else if(!/\d{4}-(0{0,1}[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])/.test(jsondata[key])){
+                                errdata+=key+':'+jsondata[key]+' 时间格式错误；';
                                 invaliddata = true;
-                            }else if(new Date(jsondata.key).getTime()>new Date().getTime() || new Date(jsondata.key).getTime()<0){
-                                errdata+=key+':'+jsondata.key+' 时间超出范围；';
+                            }else if(new Date(jsondata[key]).getTime()>new Date().getTime() || new Date(jsondata[key]).getTime()<0){
+                                errdata+=key+':'+jsondata[key]+' 时间超出范围；';
                                 invaliddata = true;
                             }
-                        }else if(colinfo[key]['coltype'] == 'numeric'){
+                        }else if(colinfo[key.toLowerCase()]['coltype'] == 'numeric'){
                             //timestamp
-                            if(isNaN(jsondata.key)){
-                                errdata+=key+':'+jsondata.key+' 不是数字；';
+                            if(isNaN(jsondata[key])){
+                                errdata+=key+':'+jsondata[key]+' 不是数字；';
                                 invaliddata = true;
                             }
                         }
@@ -242,10 +289,10 @@ let dataCheck={
                     } else throw e;
                 }
             }
-            if (haveId) {
-                return {status: haveId, msg: '数据格式和长度正确！'};
+            if (validdata) {
+                return {status: validdata, msg: '数据格式和长度正确！'};
             } else {
-                return {status: haveId, msg: '上传数据中有不规范数据存在！提示：'+errdata};
+                return {status: validdata, msg: '上传数据中有不规范数据存在！提示：'+errdata};
             }
         }else {
             return  checkid;
