@@ -3,6 +3,7 @@ let router = express.Router();
 let seckeyPool = require("../../utils/seckeyPool");
 let publisher = require("../../mq/publish");
 let constUtils = require('../../utils/constUtils');
+let postgredb = require('../../utils/postgre');
 let moment = require('moment');
 let log4js = require('../../utils/logger');
 let destination = constUtils.QUEUE_P_VIDEOINTERCOM_CALL;
@@ -15,16 +16,18 @@ let logName = jsName.replace('\.js','\.log');
  */
 router.use('/call', function(req, res, next) {
     let log=log4js.config(__dirname+'/../../',jsName,logName);
-    let json = req.body;    
-    let communityid=json.userInfo.communityId;
-    let tablename=constUtils.TABLE_P_VIDEOINTERCOM_CALL;
-    let jsondatas=json.data;
-    jsondatas=postgredb.concatid(jsondatas,tablename,communityid);
+    let json = req.body;
     let seckey = json.seckey;
-    if(seckey!='' && seckey!=undefined && seckey!=null) {
-        postgredb.getTbleColInfo(constUtils.TABLE_P_VIDEOINTERCOM_CALL,json,uploadData);
+    seckeyPool.get(seckey, function (loginuser) {
+        let communityid = JSON.parse(loginuser).communityId;
+        let tablename = constUtils.TABLE_P_VIDEOINTERCOM_CALL;
+        let jsondatas = json.data;
+        jsondatas = postgredb.concatid(jsondatas, tablename, communityid);
+        if (seckey != '' && seckey != undefined && seckey != null) {
+            postgredb.getTbleColInfo(constUtils.TABLE_P_VIDEOINTERCOM_CALL, json, uploadData);
 
-    }
+        }
+    });
     function uploadData(checkResult) {
         if(checkResult.status){
             seckeyPool.get(seckey, function (loginuser) {

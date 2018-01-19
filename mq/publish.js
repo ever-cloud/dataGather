@@ -3,7 +3,7 @@
  */
 var Stomp = require('stomp-client');
 var config = require('../properties/config');
-var client = new Stomp(config.get('activeMq.host'), config.get('activeMq.port'),config.get('activeMq.userId'), config.get('activeMq.pwd'));
+var client = new Stomp(config.get('activeMq.host'), config.get('activeMq.port'),config.get('activeMq.user'), config.get('activeMq.password'));
 var p = {};
 var _connectedCallback=function(){
     console.log('连接成功,连接中。。。');

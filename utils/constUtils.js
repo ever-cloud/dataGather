@@ -215,6 +215,13 @@ constData.TABLE_P_ALARM_DEVICEINFO = "p_alarm_deviceinfo";
 constData.QUEUE_P_ALARM_DEVICEINFO = queue+constData.TABLE_P_ALARM_DEVICEINFO;
 
 /**
+ * @name {重新初始化状态消息}
+ */
+constData.QUEUE_INITSTATUS = queue+"init_status";
+
+
+
+/**
  *
  * @name {各表组成唯一id校验}
  */
@@ -222,13 +229,13 @@ constData.pk={
     "p_videomonitor_deviceinfo":['communityid','systemId','deviceId'],
     "p_videointercom_deviceinfo":['communityid','systemId','deviceId'],
     "p_videointercom_opengate":['communityid','systemId','gateDeviceId','dateTime'],
-    "p_videointercom_call":['communityid','systemId','receiverDeviceId','callUpdate'],
-    "p_systemstatusinfo":['communityid','systemId','curdate'],
+    "p_videointercom_call":['communityid','systemId','senderDeviceId','receiverDeviceId','callUpdate'],
+    "p_systemstatusinfo":['communityid','sid','systemId','curdate'],
     "t_community_system":['communityid','sid','systemId'],
     "p_personlocation_givecard":['communityid','systemId','cardId'],
     "p_personlocation_alarm":['communityid','systemId','cardId','dateTime'],
     "p_personlocation_deviceinfo":['communityid','systemId','deviceId'],
-    "p_patrol_nightrecord":['communityid','systemId','deviceId'],
+    "p_patrol_nightrecord":['communityid','systemId','deviceId','planTime'],
     "p_patrol_deviceinfo":['communityid','systemId','deviceId'],
     "p_parking_parkareainfo":['communityid','systemId','curdate'],
     "p_parking_deviceinfo":['communityid','systemId','deviceId'],
@@ -245,7 +252,7 @@ constData.pk={
     "p_devicealarm":['communityid','sid','systemId','deviceId','dateTime'],
     "p_broadcast_record":['communityid','systemId','areaId','dateTime'],
     "p_broadcast_deviceinfo":['communityid','systemId','deviceId'],
-    "p_broadcast_area":['communityid','systemId','id'],
+    "p_broadcast_area":['communityid','systemId','areaId'],
     "p_alarm_sectorinfo":['communityid','systemId','sectorId'],
     "p_alarm_intrusion":['communityid','systemId','sectorId','dateTime'],
     "p_alarm_deviceinfo":['communityid','systemId','deviceId'],

@@ -82,5 +82,21 @@ router.use('/systemstatistic', function(req, res, next) {
 
     }
 });
-
+//初始化统计信息订阅，json串中init属性为true表示需要重新初始化及统计
+router.use('/initstatus', function(req, res, next) {
+    let log=log4js.config(__dirname+'/../../',jsName,logName);
+    let json = req.body;
+    if (json){
+        //用eval转json字符串为json对象
+        // let bjson = eval("("+json+")");
+        if(json.init){
+            let initstatistics = new initStatistics();
+            initstatistics.createSysteminfo();
+            initstatistics.createStatistics();
+            res.send('{"msg":"初始化数据成功!"}');
+        }
+    }else{
+        console.log('No initstatus Body!Body is Null or !');
+    }
+});
 module.exports = router;

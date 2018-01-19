@@ -16,16 +16,18 @@ let postgredb = require('../../utils/postgre');
  */
 router.use('/record', function(req, res, next) {
     let log=log4js.config(__dirname+'/../../',jsName,logName);
-    let json = req.body;    
-    let communityid=json.userInfo.communityId;
-    let tablename=constUtils.TABLE_P_BROADCAST_RECORD;
-    let jsondatas=json.data;
-    jsondatas=postgredb.concatid(jsondatas,tablename,communityid);
+    let json = req.body;
     let seckey = json.seckey;
-    if(seckey!='' && seckey!=undefined && seckey!=null) {
-        postgredb.getTbleColInfo(constUtils.TABLE_P_BROADCAST_RECORD,json,uploadData);
+    seckeyPool.get(seckey, function (loginuser) {
+        let communityid = JSON.parse(loginuser).communityId;
+        let tablename = constUtils.TABLE_P_BROADCAST_RECORD;
+        let jsondatas = json.data;
+        jsondatas = postgredb.concatid(jsondatas, tablename, communityid);
+        if (seckey != '' && seckey != undefined && seckey != null) {
+            postgredb.getTbleColInfo(constUtils.TABLE_P_BROADCAST_RECORD, json, uploadData);
 
-    }
+        }
+    });
     function uploadData(checkResult) {
         if(checkResult.status){
             seckeyPool.get(seckey, function (loginuser) {

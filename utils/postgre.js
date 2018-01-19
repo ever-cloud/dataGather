@@ -150,12 +150,12 @@ postgredb.getTbleColInfo=function(tablename,jsonbody,cb){
                 }
             });
         }
-        cb(postgredb.checkDate(jsondata,colinfo));
+        cb(postgredb.checkDate(jsondata,colinfo,tablename));
     });
 }
-postgredb.checkDate=function(jsondata,colinfo,cb){
+postgredb.checkDate=function(jsondata,colinfo,tablename,cb){
     if((typeof jsondata)=='object' && Object.keys(jsondata).length>0) {
-        let checkresult=dataCheck.checktypelen(jsondata,colinfo);
+        let checkresult=dataCheck.checktypelen(jsondata,colinfo,tablename);
         return checkresult;
     }
 }
@@ -181,7 +181,7 @@ postgredb.concatid=function(jsondatas,tablename,communityid){
 }
 let dataCheck={
     //检查是否有id属性和是否包含联合主键
-    checkid: function (jsondatas) {
+    checkid: function (jsondatas,tablename) {
         let haveId = true;
         let havePkIds = true;
         let errdata ='';
@@ -193,7 +193,7 @@ let dataCheck={
                     if (key.toLowerCase() == 'id' && jsondata[key].length>0) {
                         inhaveId = true;
 
-                        foreach.break = new Error("normal Stop");
+                        // foreach.break = new Error("normal Stop");
                     }
                 });
                 if (!inhaveId) {
@@ -205,10 +205,10 @@ let dataCheck={
                     if(key !='communityid' && key !='curdate'){
                         if(jsondata[key] ==undefined ){
                             havePkIds = false;
-                            errdata+=key+' 字段不存在；';
+                            errdata+=JSON.stringify(jsondata)+key+' 字段不存在；';
                         }else if(jsondata[key] ==''){
                             havePkIds = false;
-                            errdata+=key+' 字段值为空；';
+                            errdata+=JSON.stringify(jsondata)+key+' 字段值为空；';
                         }
                     }
 
@@ -231,8 +231,8 @@ let dataCheck={
         }
     },
     //检查字符串数据对应类型的长度、数值范围
-    checktypelen:function (jsondatas,colinfo) {
-        let checkid=this.checkid(jsondatas);
+    checktypelen:function (jsondatas,colinfo,tablename) {
+        let checkid=this.checkid(jsondatas,tablename);
         if(checkid.status){
             let validdata = true;
             let errdata ='';

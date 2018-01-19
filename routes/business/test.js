@@ -1,22 +1,33 @@
 /**
  * Created by mumianhua on 2017/3/23.
  */
-var path=require('path');
-let constUtils = require('../../utils/constUtils');
-let myjson=[{'system':'1',deviceid:'333','unit':''},{'system':'3',deviceid:'555','unit':'2'}]
-function gid(json) {
-    json.id=json.system+json.deviceid+json.unit;
-    return json;
-}
-for (let jsondata of myjson){
-
-    jsondata=gid(jsondata);
-}
-console.log(JSON.stringify(myjson));
-let tablename='p_videomonitor_deviceinfo';
-constUtils.pk[tablename].forEach(function (key,index) {
-    console.log(key);
-})
+// var path=require('path');
+// let constUtils = require('../../utils/constUtils');
+// function isJson(obj){
+//     var isjson = typeof(obj) == "object" && Object.prototype.toString.call(obj).toLowerCase() == "[object object]" && !obj.length;
+//     return isjson;
+// }
+// try{
+//     let myjson={['system':'1',deviceid:'333','unit':''
+//     }]
+// }catch(e){console.log(e)}
+// console.log(isJson(myjson));
+// function gid(json) {
+//     json.id=json.system+json.deviceid+json.unit;
+//     return json;
+// }
+// for (let jsondata of myjson){
+//
+//     jsondata=gid(jsondata);
+// }
+// console.log(JSON.stringify(myjson));
+// let tablename='p_videomonitor_deviceinfo';
+// constUtils.pk[tablename].forEach(function (key,index) {
+//     console.log(key);
+// })
+//
+// let j="{\"userId\":\"42f591b5ada5cb59d30616e67cfba9c8\",\"password\":\"a509e208ca344adf3861e98cb218331f\",\"communityId\":\"312\"}";
+// console.log(JSON.parse(j).communityId);
 // var http = require('http');
 // var express = require('express');
 // var app = express();
@@ -349,3 +360,67 @@ constUtils.pk[tablename].forEach(function (key,index) {
 // }
 // let m='{&quot;selectAreaUrl&quot;:&quot;/door/selectArea&quot;,&quot;getPwdUrl&quot;:&quot;/door/getPwd&quot;}';
 // console.log(JSON.parse(m));
+// let jsondatas=[{"systemId":"100","status":"1","id":"3121002017830"},{"sid":"4","systemId":"312463","status":"1","id":"31243124632017830"},{"sid":"6","systemId":"312628","status":"1","id":"31263126282017830"},{"sid":"7","systemId":"312759","status":"1","id":"31273127592017830"},{"sid":"9","systemId":"312998","status":"1","id":"31293129982017830"}];
+// let haveId = true;
+// let havePkIds = true;
+// let errdata ='';
+// let tablename='p_systemstatusinfo'
+// for (let jsondata of jsondatas) {
+//     let inhaveId =  false;
+//
+//     try {
+//         Object.keys(jsondata).forEach((key, index) => {
+//             if (key.toLowerCase() == 'id' && jsondata[key].length>0) {
+//                 inhaveId = true;
+//
+//                 // foreach.break = new Error("normal Stop");
+//             }
+//         });
+//         if (!inhaveId) {
+//             haveId = false;
+//             errdata+=JSON.stringify(jsondata);
+//         }
+//
+//         constUtils.pk[tablename].forEach(function (key,index) {
+//             if(key !='communityid' && key !='curdate'){
+//                 if(jsondata[key] ==undefined ){
+//                     havePkIds = false;
+//                     errdata+=key+' 字段不存在；';
+//                 }else if(jsondata[key] ==''){
+//                     havePkIds = false;
+//                     errdata+=key+' 字段值为空；';
+//                 }
+//             }
+//
+//         });
+//
+//     } catch (e) {
+//         if (e.message === "foreach is not defined") {
+//         } else throw e;
+//     }
+// }
+// if (haveId) {
+//     if(havePkIds){
+//
+//        console.log({status: havePkIds, msg: '数据包含id及联合主键，正确！'}) ;
+//     }else{
+//         console.log( {status: havePkIds, msg: '上传数据中关键字段数据错误！字段数据：'+errdata});
+//     }
+// } else {
+//     console.log( {status: haveId, msg: '上传数据中所有关键字段数据不存在！数据：'+errdata});
+// }
+let initjson="{\"init\":\"true\"}";
+let injson=eval("("+initjson+")");
+let ijson=JSON.parse(initjson);
+console.log(ijson.init);
+console.log(injson.init);
+Object.keys(ijson).forEach(function (field,index) {
+    console.log(field);
+    console.log(index);
+});
+if(ijson.init){
+    console.log('1');
+}else{
+    console.log('2');
+
+}

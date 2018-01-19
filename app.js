@@ -8,10 +8,10 @@ let cookieParser = require('cookie-parser');
 let bodyParser = require('body-parser');
 let seckeyPool = require("./utils/seckeyPool");
 let subscribe = require("./mq/subscribe");
-let publish = require('./mq/publish');
 let postgre = require("./utils/postgre");
 let redis = require("./utils/redis");
 let constUtils = require('./utils/constUtils');
+let publisher = require('./mq/publish');
 let log4js = require('./utils/logger');
 let initStatistics = require('./routes/base/initStatistics');
 let schedule = require('node-schedule');
@@ -61,13 +61,13 @@ initstatistics.createSysteminfo();
 
 //初始化统计物联系统，按社区，大区，集团，海尔存放目前12块信息,开始
 initstatistics.createStatistics();
+
 //每天凌晨12点初始化一下
 schedule.scheduleJob('1 0 0 * * *',function(){
     console.log('每日0点初始化开始~~~~');
+    initstatistics.createSysteminfo();
     initstatistics.createStatistics();
 });
-// initstatistics.publishTopic();
-
 //初始化统计结束
 //拦域所有URL并验证
 app.use(function (req, res, next) {
@@ -85,10 +85,11 @@ app.use(function (req, res, next) {
     }
     //不需要验证的路由地址
     function notcheckurl(path){
-        let paths=[];
+        let paths=['/devicestatus/initstatus'];
         let result = false;
             if(paths.length>0){
                 paths.forEach(function(comparePath){
+                    console.log((path==comparePath));
                     if(path==comparePath)
                         result = true;
                         return;
@@ -113,7 +114,7 @@ app.use(function (req, res, next) {
 //路由定义根路径
 let index = require('./routes/index');
 app.use('/', index);
-
+//app.use('/iotinfo', index);测试服务器地址
 //业务接口处理开始，用户login登录请求登陆系统后生成安全码（seckey）存放redis，有效时间默认一天
 let login = require('./routes/base/login');
 app.use('/login', login);
@@ -228,6 +229,7 @@ app.use('/devicestatus', systemstatistic);
 //物联系统[概览]设备状态统计获取接口（前端从redis中拉取所需数据)
 let devicestatus = require('./routes/business/devicestatus');
 app.use('/mainpage', devicestatus);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
